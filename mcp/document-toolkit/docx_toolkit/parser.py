@@ -13,11 +13,12 @@ _ALIGN_MAP = {
     WD_ALIGN_PARAGRAPH.JUSTIFY: "JUSTIFY",
 }
 
-_LINE_RULE_MAP = {
-    "EXACTLY": "EXACTLY",
-    "AT_LEAST": "AT_LEAST",
-    "MULTIPLE": "MULTIPLE",
-}
+def _line_rule_name(rule):
+    """取行距规则枚举名（EXACTLY/AT_LEAST/MULTIPLE），兼容 None 与旧版。"""
+    if rule is None:
+        return "MULTIPLE"
+    name = getattr(rule, "name", None)
+    return name if name in ("EXACTLY", "AT_LEAST", "MULTIPLE") else str(rule)
 
 
 def _run_font_info(run) -> dict:
@@ -44,7 +45,7 @@ def _paragraph_info(p) -> dict:
     info = {
         "style_name": p.style.name if p.style else None,
         "align": _ALIGN_MAP.get(pf.alignment, "LEFT"),
-        "line_spacing_rule": _LINE_RULE_MAP.get(str(pf.line_spacing_rule), "MULTIPLE"),
+        "line_spacing_rule": _line_rule_name(pf.line_spacing_rule),
         "line_spacing_pt": None,
         "line_spacing_multiple": None,
         "first_line_indent_pt": None,
