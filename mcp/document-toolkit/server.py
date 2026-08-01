@@ -31,25 +31,70 @@ import sys
 # 确保可 import 包内模块（兼容从任意 cwd 启动）
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from docx_toolkit.builder import build
-from docx_toolkit.parser import extract_structure as _extract
-from docx_toolkit.parser import parse
-from docx_toolkit.templates_store import (
-    compare_templates as _compare_templates,
-    delete_user_template,
-    export_template,
-    get_builtin,
-    list_templates as _list_templates,
-    make_template_meta,
-    rename_user_template,
-    save_user_template,
-)
-from docx_toolkit.batch import batch_build as _batch_build
-from docx_toolkit.restructure import suggest_restructure as _suggest_restructure
-from excel_toolkit.builder import build as _build_excel
-from excel_toolkit.parser import parse as _parse_excel
-from excel_toolkit.parser import to_data as _excel_to_data
-from pdf_toolkit.converter import convert as _pdf_convert
+import importlib
+import threading
+import time
+
+# 模块级导入（热重载依赖：工具函数通过模块属性访问最新实现）
+import docx_toolkit.batch
+import docx_toolkit.builder
+import docx_toolkit.parser
+import docx_toolkit.restructure
+import docx_toolkit.styles
+import docx_toolkit.templates_store
+import excel_toolkit.builder
+import excel_toolkit.parser
+import pdf_toolkit.converter
+
+# ── 热重载机制：监听源码 mtime，变化时按依赖顺序 reload 模块 ──
+_HOT_RELOAD_ORDER = [
+    "docx_toolkit.styles",
+    "docx_toolkit.templates_store",
+    "docx_toolkit.parser",
+    "docx_toolkit.builder",
+    "docx_toolkit.batch",
+    "docx_toolkit.restructure",
+    "excel_toolkit.builder",
+    "excel_toolkit.parser",
+    "pdf_toolkit.converter",
+]
+_SRC_DIR = os.path.dirname(os.path.abspath(__file__))
+_hot_last_check = 0.0
+_hot_mtimes = {}
+
+
+def _hot_reload():
+    """工具调用前检查：源码文件有变化则 reload 相关模块（无需重启进程）。"""
+    global _hot_last_check
+    now = time.time()
+    if now - _hot_last_check < 1.0:
+        return
+    _hot_last_check = now
+    changed = False
+    for root, _dirs, files in os.walk(_SRC_DIR):
+        if "__pycache__" in root or "user_templates" in root:
+            continue
+        for f in files:
+            if not f.endswith(".py"):
+                continue
+            p = os.path.join(root, f)
+            try:
+                mt = os.path.getmtime(p)
+            except OSError:
+                continue
+            if p not in _hot_mtimes:
+                _hot_mtimes[p] = mt
+            elif mt != _hot_mtimes[p]:
+                _hot_mtimes[p] = mt
+                changed = True
+    if changed:
+        for name in _HOT_RELOAD_ORDER:
+            mod = sys.modules.get(name)
+            if mod is not None:
+                try:
+                    importlib.reload(mod)
+                except Exception as e:  # noqa: BLE001
+                    print(f"[hot-reload] {name} reload 失败: {e}", file=sys.stderr)
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -91,8 +136,9 @@ def _err_sanitized(e: Exception) -> str:
 @mcp.tool()
 def parse_docx(path: str) -> str:
     """解析 .docx 文件，返回页面设置、样式体系与完整结构树（JSON 字符串）。"""
+    _hot_reload()
     try:
-        return _ok(parse(path))
+        return _ok(docx_toolkit.parser.parse(path))
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 
@@ -100,8 +146,9 @@ def parse_docx(path: str) -> str:
 @mcp.tool()
 def extract_structure(path: str) -> str:
     """仅提取文档标题结构树（大纲），用于'不改结构'场景的结构锁定。"""
+    _hot_reload()
     try:
-        return _ok(_extract(path))
+        return _ok(docx_toolkit.parser.extract_structure(path))
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 
@@ -109,11 +156,12 @@ def extract_structure(path: str) -> str:
 @mcp.tool()
 def build_docx(spec_json: str, output_path: str) -> str:
     """按 DocumentSpec JSON 生成 .docx 文件。spec 含 doc_type/title/page/default_font/sections。"""
+    _hot_reload()
     try:
         spec = json.loads(spec_json)
         if not isinstance(spec, dict):
             return _err("spec_json 必须是 JSON 对象")
-        return _ok(build(spec, output_path))
+        return _ok(docx_toolkit.builder.build(spec, output_path))
     except json.JSONDecodeError as e:
         return _err(f"spec_json 不是合法 JSON: {e}")
     except Exception as e:  # noqa: BLE001
@@ -123,8 +171,9 @@ def build_docx(spec_json: str, output_path: str) -> str:
 @mcp.tool()
 def import_template(docx_path: str, template_name: str) -> str:
     """导入用户范文/规范说明文档：解析页面/样式/骨架，保存为用户模板，供后续生成使用。"""
+    _hot_reload()
     try:
-        data = parse(docx_path)
+        data = docx_toolkit.parser.parse(docx_path)
         skeleton = [
             {"level": int(s["type"][-1]) if s["type"].startswith("heading") else 0, "text": s["text"]}
             for s in data["structure"]
@@ -148,12 +197,12 @@ def import_template(docx_path: str, template_name: str) -> str:
                 role = "body"
             role_styles.setdefault(role, s)
         template = {
-            "meta": make_template_meta(template_name, "user", "user", f"从 {docx_path} 导入"),
+            "meta": docx_toolkit.templates_store.make_template_meta(template_name, "user", "user", f"从 {docx_path} 导入"),
             "page": data["page"],
             "styles": role_styles,
             "skeleton": skeleton,
         }
-        path = save_user_template(template, template_name)
+        path = docx_toolkit.templates_store.save_user_template(template, template_name)
         return _ok({"template": template, "path": path})
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
@@ -162,24 +211,25 @@ def import_template(docx_path: str, template_name: str) -> str:
 @mcp.tool()
 def get_template(doc_type: str) -> str:
     """读取预置模板（doc_type ∈ general|thesis|official|contract|bidding|legal|government_report|techdoc|resume|notice），返回 JSON。"""
-    t = get_builtin(doc_type)
+    _hot_reload()
+    t = docx_toolkit.templates_store.get_builtin(doc_type)
     if t is None:
-        from docx_toolkit.templates_store import _DOC_TYPES
-        return _err(f"未知类型 {doc_type}，可用: {', '.join(sorted(_DOC_TYPES))}")
+        return _err(f"未知类型 {doc_type}，可用: {', '.join(sorted(docx_toolkit.templates_store._DOC_TYPES))}")
     return _ok({"template": t})
 
 
 @mcp.tool()
 def list_templates() -> str:
     """列出全部可用模板（内置 10 类 + 用户导入），含排版摘要。"""
-    return _ok({"templates": _list_templates()})
+    return _ok({"templates": docx_toolkit.templates_store.list_templates()})
 
 
 @mcp.tool()
 def suggest_restructure(source_path: str, target_doc_type: str) -> str:
     """结构决策增强：对比源文档与目标类型模板，生成改造建议（保留/新增/移除清单）。"""
+    _hot_reload()
     try:
-        return _ok(_suggest_restructure(source_path, target_doc_type))
+        return _ok(docx_toolkit.restructure.suggest_restructure(source_path, target_doc_type))
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 
@@ -188,10 +238,11 @@ def suggest_restructure(source_path: str, target_doc_type: str) -> str:
 def batch_build(spec_template_json: str, data_rows_json: str, output_dir: str,
                 filename_field: str = "") -> str:
     """批量生成：spec 模板（字符串可含 {变量} 占位）+ 多组数据 → 批量产出到 output_dir。"""
+    _hot_reload()
     try:
         spec = json.loads(spec_template_json)
         rows = json.loads(data_rows_json)
-        return _ok(_batch_build(spec, rows, output_dir, filename_field or None))
+        return _ok(docx_toolkit.batch.batch_build(spec, rows, output_dir, filename_field or None))
     except json.JSONDecodeError as e:
         return _err(f"JSON 解析失败: {e}")
     except Exception as e:  # noqa: BLE001
@@ -201,8 +252,9 @@ def batch_build(spec_template_json: str, data_rows_json: str, output_dir: str,
 @mcp.tool()
 def rename_template(old_name: str, new_name: str) -> str:
     """重命名用户导入的模板。"""
+    _hot_reload()
     try:
-        path = rename_user_template(old_name, new_name)
+        path = docx_toolkit.templates_store.rename_user_template(old_name, new_name)
         if path == "EXISTS":
             return _err(f"目标模板名已存在: {new_name}")
         if path is None:
@@ -215,8 +267,9 @@ def rename_template(old_name: str, new_name: str) -> str:
 @mcp.tool()
 def delete_template(name: str) -> str:
     """删除用户导入的模板（内置模板不可删）。"""
+    _hot_reload()
     try:
-        if delete_user_template(name):
+        if docx_toolkit.templates_store.delete_user_template(name):
             return _ok({"deleted": name})
         return _err(f"模板不存在或为内置模板: {name}")
     except Exception as e:  # noqa: BLE001
@@ -226,8 +279,9 @@ def delete_template(name: str) -> str:
 @mcp.tool()
 def export_template(name: str, output_path: str) -> str:
     """导出模板（用户或内置）为 JSON 文件。"""
+    _hot_reload()
     try:
-        path = export_template(name, output_path)
+        path = docx_toolkit.templates_store.export_template(name, output_path)
         if path == "EXISTS":
             return _err(f"目标文件已存在: {output_path}")
         if path is None:
@@ -240,7 +294,7 @@ def export_template(name: str, output_path: str) -> str:
 @mcp.tool()
 def compare_templates(name_a: str, name_b: str) -> str:
     """对比两个模板的页面/样式/骨架差异。"""
-    return _ok(_compare_templates(name_a, name_b))
+    return _ok(docx_toolkit.templates_store.compare_templates(name_a, name_b))
 
 
 
@@ -250,11 +304,12 @@ def compare_templates(name_a: str, name_b: str) -> str:
 @mcp.tool()
 def build_excel(spec_json: str, output_path: str) -> str:
     """按 ExcelSpec JSON 生成 .xlsx 报表：sheets 含 rows/styles/merges/col_widths/freeze/filter；默认表头美化（加粗+浅蓝填充+边框+自适应列宽）。"""
+    _hot_reload()
     try:
         spec = json.loads(spec_json)
         if not isinstance(spec, dict):
             return _err("spec_json 必须是 JSON 对象")
-        return _ok(_build_excel(spec, output_path))
+        return _ok(excel_toolkit.builder.build(spec, output_path))
     except json.JSONDecodeError as e:
         return _err(f"spec_json 不是合法 JSON: {e}")
     except Exception as e:  # noqa: BLE001
@@ -264,8 +319,9 @@ def build_excel(spec_json: str, output_path: str) -> str:
 @mcp.tool()
 def parse_excel(path: str, sheet_name: str = "") -> str:
     """解析 .xlsx：返回各 sheet 的行数据/合并单元格/列宽。sheet_name 为空解析全部。"""
+    _hot_reload()
     try:
-        return _ok(_parse_excel(path, sheet_name or None))
+        return _ok(excel_toolkit.parser.parse(path, sheet_name or None))
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 
@@ -273,8 +329,9 @@ def parse_excel(path: str, sheet_name: str = "") -> str:
 @mcp.tool()
 def excel_to_data(path: str, sheet_name: str = "") -> str:
     """把 Excel 数据表转为 JSON 行数组（首行为字段名），可直接作为 batch_build 的 data_rows 数据源。"""
+    _hot_reload()
     try:
-        return _ok(_excel_to_data(path, sheet_name or None))
+        return _ok(excel_toolkit.parser.to_data(path, sheet_name or None))
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 
@@ -284,8 +341,9 @@ def excel_to_data(path: str, sheet_name: str = "") -> str:
 @mcp.tool()
 def convert_to_pdf(docx_path: str, output_path: str = "") -> str:
     """docx → PDF 转换。自动引擎降级：Word COM → WPS COM → LibreOffice headless。"""
+    _hot_reload()
     try:
-        return _ok(_pdf_convert(docx_path, output_path or None))
+        return _ok(pdf_toolkit.converter.convert(docx_path, output_path or None))
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 
@@ -293,6 +351,7 @@ def convert_to_pdf(docx_path: str, output_path: str = "") -> str:
 @mcp.tool()
 def pdf_info(path: str) -> str:
     """读取 PDF 元信息（页数/文件大小）。"""
+    _hot_reload()
     try:
         if not os.path.exists(path):
             return _err(f"文件不存在: {path}")
