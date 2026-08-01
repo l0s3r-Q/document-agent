@@ -4,7 +4,7 @@
 
 1. **与工具无关**：Skill 遵循 Anthropic Agent Skills 规范（SKILL.md），MCP 遵循标准 MCP 协议（stdio）。任何支持这两种标准的 AI 工具都能消费本项目，不绑定 Reasonix / Claude Code / Cursor 等任何一家。
 2. **大脑与手脚分离**：决策逻辑放 Skill（模型可读、可解释、可修改），文档读写放 MCP（确定性、可测试、可复用）。
-3. **预置 + 导入双轨**：内置 5 类文档规范模板；用户可导入范文/规范说明文档覆盖预置排版。
+3. **预置 + 导入双轨**：内置 10 类文档规范模板；用户可导入范文/规范说明文档覆盖预置排版。
 
 ## 分层
 
@@ -20,7 +20,7 @@
 └──────────────┬──────────────────────────────────────────┘
                │ DocumentSpec JSON（结构化契约）
 ┌──────────────▼─ 执行层（MCP）────────────────────────────┐
-│ docx-toolkit（FastMCP / python-docx）                    │
+│ document-toolkit（FastMCP / python-docx）                    │
 │   parse_docx / extract_structure / build_docx            │
 │   import_template / get_template / list_templates        │
 │   排版参数源：docx_toolkit/templates/*.json（10 类预置）   │
@@ -80,7 +80,7 @@
 GitHub 仓库（本项目）         安装位置（用户机器）
 document-agent/          →  各工具共享 skills 目录
 ├── skills/...           →  C:\Users\<user>\skills\skills\
-└── mcp/docx-toolkit/    →  C:\Users\<user>\skills\mcp\docx-toolkit\
+└── mcp/document-toolkit/    →  C:\Users\<user>\skills\mcp\document-toolkit\
                               （MCP 配置指向该路径）
 ```
 

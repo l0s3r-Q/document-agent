@@ -24,10 +24,10 @@ document-intelligence/
 
 ## 依赖
 
-- 需要 `docx-toolkit` MCP server（本仓库 `mcp/docx-toolkit/`）提供解析/生成/导入能力
+- 需要 `document-toolkit` MCP server（本仓库 `mcp/document-toolkit/`）提供解析/生成/导入能力
 - 机器可读的预置模板 JSON 在 MCP server 的 `docx_toolkit/templates/` 下，通过 `get_template` 工具读取
 
 ## 安装
 
 1. 将本目录放入工具的 skills 目录（或配置 skills 路径指向其父目录）
-2. 配置 docx-toolkit MCP（见 `mcp/docx-toolkit/README.md`）
+2. 配置 document-toolkit MCP（见 `mcp/document-toolkit/README.md`）

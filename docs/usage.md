@@ -5,7 +5,7 @@
 ### 依赖
 
 ```bash
-pip install -r mcp/docx-toolkit/requirements.txt
+pip install -r mcp/document-toolkit/requirements.txt
 ```
 
 ### 配置到各工具
@@ -17,21 +17,21 @@ pip install -r mcp/docx-toolkit/requirements.txt
 paths = ["C:\Users\<user>\skills\skills"]
 
 [[plugins]]
-name = "docx-toolkit"
+name = "document-toolkit"
 command = "python"
-args = ["C:\Users\<user>\skills\mcp\docx-toolkit\server.py"]
+args = ["C:\Users\<user>\skills\mcp\document-toolkit\server.py"]
 ```
 
-**Claude Code**：`~/.claude/skills/` 下为 `skills/document-intelligence` 建符号链接；`~/.claude.json` 的 `mcpServers` 添加 docx-toolkit。
+**Claude Code**：`~/.claude/skills/` 下为 `skills/document-intelligence` 建符号链接；`~/.claude.json` 的 `mcpServers` 添加 document-toolkit。
 
 **Cursor / VS Code / Cline / Roo**：各自的 MCP 设置中添加：
 
 ```json
 {
   "mcpServers": {
-    "docx-toolkit": {
+    "document-toolkit": {
       "command": "python",
-      "args": ["<绝对路径>/mcp/docx-toolkit/server.py"]
+      "args": ["<绝对路径>/mcp/document-toolkit/server.py"]
     }
   }
 }
@@ -81,6 +81,11 @@ args = ["C:\Users\<user>\skills\mcp\docx-toolkit\server.py"]
 | delete_template | name | {ok, deleted} |
 | export_template | name, output_path | {ok, path} |
 | compare_templates | name_a, name_b | {ok, diff} |
+| build_excel | spec_json, output_path | {ok, path, sheets} |
+| parse_excel | path, sheet_name? | {ok, sheets} |
+| excel_to_data | path, sheet_name? | {ok, rows} |
+| convert_to_pdf | docx_path, output_path? | {ok, path, engine} |
+| pdf_info | path | {ok, pages, size_bytes} |
 
 ## 常见问题
 

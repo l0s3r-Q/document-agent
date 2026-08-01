@@ -4,11 +4,11 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mcp", "docx-toolkit"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mcp", "document-toolkit"))
 
 from docx_toolkit.styles import BUILTIN_STYLES
 
-TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mcp", "docx-toolkit", "docx_toolkit", "templates")
+TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mcp", "document-toolkit", "docx_toolkit", "templates")
 
 KEY_FIELDS = ("font_name", "size_pt", "bold", "align", "line_spacing_rule", "line_spacing_pt", "line_spacing_multiple", "first_line_indent_chars")
 

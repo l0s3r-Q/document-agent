@@ -18,7 +18,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          pip install -r mcp/docx-toolkit/requirements.txt
+          pip install -r mcp/document-toolkit/requirements.txt
           pip install pytest
+      - name: Install LibreOffice (PDF 测试)
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer fonts-noto-cjk
       - name: Run tests
         run: pytest tests/ -v

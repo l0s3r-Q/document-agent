@@ -1,18 +1,18 @@
 ---
 name: document-intelligence
-description: 文档智能写作代理。理解用户自然语言需求，自动识别文档类型（通用文档/学位论文/党政公文/合同协议/招投标文书），决策结构策略（从零生成/改结构/不改结构），按规范排版生成 .docx；支持导入用户范文/规范说明文档制作成品。触发词：文档、公文、通知、报告、方案、论文、合同、协议、招标、投标、纪要、润色、改写、排版、格式、范文、模板导入。
+description: 文档智能写作代理。理解用户自然语言需求，自动识别文档类型（通用文档/学位论文/党政公文/合同协议/招投标文书/法律文书/政府工作报告/技术文档/简历/通知公告/Excel表格/PDF转换），决策结构策略（从零生成/改结构/不改结构），按规范排版生成 .docx/.xlsx/.pdf；支持批量生成、模板导入与管理、结构改造建议。触发词：文档、公文、通知、公告、报告、方案、论文、合同、协议、招标、投标、纪要、起诉状、律师函、简历、政府工作报告、需求说明书、Excel、表格、报表、xlsx、PDF、导出PDF、转换PDF、润色、改写、排版、格式、范文、模板导入、批量。
 ---
 
 # document-intelligence —— 文档智能写作代理
 
 ## 能力概述
 
-输入用户自然语言 → 判定文档类型 → 决策结构策略 → 制定写作计划 → 调用 docx-toolkit MCP 解析/生成 → 输出成品 `.docx`。
+输入用户自然语言 → 判定文档类型 → 决策结构策略 → 制定写作计划 → 调用 document-toolkit MCP 解析/生成 → 输出成品 `.docx` / `.xlsx` / `.pdf`。
 
 四层工作流：
 
 1. **意图识别**：从用户描述中提取文档类型、主题、要求
-2. **类型判定**：映射到 5 类规范之一（official/thesis/contract/bidding/general）
+2. **类型判定**：映射到 10 类规范 + 2 类格式（official/thesis/contract/bidding/general/legal/government_report/techdoc/resume/notice + excel/pdf）
 3. **结构决策**：根据"是否有输入文件"和"是否要求改结构"选择策略
 4. **计划与执行**：章节规划 → 内容要点 → 排版参数 → 生成 → 回读校验
 
@@ -20,19 +20,29 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 
 | 关键词 | 文档类型 | doc_type |
 |--------|---------|----------|
-| 通知、请示、报告、函、决定、意见、批复、公告、公文、红头、发文 | 党政公文 | official |
+| 请示、批复、决定、意见、红头、发文、机关通知、政府令 | 党政公文 | official |
 | 论文、学位论文、毕业论文、开题报告、学术论文、毕业设计 | 学位论文 | thesis |
 | 合同、协议、合约、条款、甲乙双方、违约责任 | 合同协议 | contract |
 | 招标、投标、招标公告、招标文件、投标文件、评标、中标 | 招投标文书 | bidding |
-| 报告、方案、说明、总结、计划、会议纪要、周会纪要、邮件、简历、说明书、通用文档 | 通用文档 | general |
+| 报告、方案、说明、总结、计划、会议纪要、周会纪要、邮件、说明书、通用文档 | 通用文档 | general |
 | 起诉状、答辩状、律师函、上诉状、法律文书、诉讼、仲裁申请 | 法律文书 | legal |
 | 政府工作报告、政府汇报、人大报告、政府述职 | 政府工作报告 | government_report |
 | 需求说明书、设计文档、操作手册、技术方案、接口文档、白皮书 | 技术文档 | techdoc |
 | 简历、个人简介、求职、应聘 | 简历 | resume |
-| 公告、通知公告、活动通知、停水停电通知、公司公告 | 通知公告 | notice |
+| 通知公告、放假通知、会议通知、活动通知、停水停电通知、放假公告、公司公告、社区公告 | 通知公告 | notice |
+| Excel、表格、报表、数据表、花名册、Excel清单、数据清单、xlsx、统计表 | Excel 表格 | excel |
+| PDF、导出PDF、转成PDF、转PDF、生成PDF | PDF 转换 | pdf |
 
-判定规则：命中多个类型时，取**最先命中且最具体**的类型；无法判定时默认 general。
-特别注意：**"报告/纪要"默认归 general**（如工作总结报告、会议纪要），除非明确出现"红头""发文""批复"等公文体裁词才判 official。
+判定规则（按优先级）：
+1. **明确改写指令优先**："改成X/按X格式/按X规范" → 以**目标类型**为准（如"把方案改成招标公告"→ bidding）
+2. **最长关键词优先**：命中多个类型时，取**匹配关键词最长**的类型（如"会议通知"（4 字）优于"通知"（2 字）→ notice）
+3. 等长冲突时按表序（official > thesis > contract > bidding > legal > government_report > techdoc > resume > notice > excel > pdf > general）
+4. **"通知/公告"语境规则**：出现"公司/社区/单位内部/放假/活动"等非党政语境 → notice；出现"红头/发文/机关" → official
+5. **"报告/纪要"默认归 general**（工作总结报告、会议纪要），除非明确"政府工作报告"（→ government_report）或公文体裁词
+6. **Excel/PDF 指令独立判定**："做/生成/导出 XX 表格/报表/花名册" → excel；"转 PDF/导出 PDF" → pdf（与文档类型并行）
+7. 无法判定时默认 general。
+
+> **注意**：excel/pdf 仅用于意图判定，**不**是 get_template/build_docx 的合法 doc_type（get_template 仅支持 10 类 docx 类型）。
 
 ## 二、结构决策树（必须执行）
 
@@ -42,6 +52,7 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 │   └── 从零生成：get_template(doc_type) 取预置模板骨架 → 按用户主题填充章节 → build_docx
 ├── 提供了文件 + 明确要求"改结构/重组/重构/调整章节"
 │   ├── suggest_restructure(路径, 目标doc_type) 生成改造建议（保留/新增/移除清单）
+│   ├── **向用户展示 keep/add/remove 建议并确认**（尤其 remove 项，避免误删内容）
 │   ├── parse_docx(路径) 解析内容与样式（含正文文本）
 │   ├── 按改造建议 + 目标类型规范重新设计框架（保留可复用内容块）
 │   └── build_docx(新框架, 输出路径)
@@ -82,7 +93,7 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 
 > 用户导入模板的排版**优先于**预置模板：通过 spec.styles 覆盖实现。
 
-## 四、5 类文档规范速查表
+## 四、10 类文档规范速查表
 
 ### 党政公文（GB/T 9704-2012）—— official
 - 页边距：上 3.7cm、下 3.5cm、左 2.8cm、右 2.6cm
@@ -129,7 +140,7 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 - 标题黑体 18pt 加粗居中；正文宋体小四 1.5 倍行距
 - 结构：标题 → 对象 → 事项/时间/要求 → 落款（详见 templates/notice.md）
 
-## 五、与 docx-toolkit MCP 的协作契约
+## 五、与 document-toolkit MCP 的协作契约
 
 | 工具 | 参数 | 用途 |
 |------|------|------|
@@ -145,12 +156,17 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 | `delete_template(name)` | str | 删除用户模板 |
 | `export_template(name, output_path)` | str, str | 导出模板 JSON |
 | `compare_templates(name_a, name_b)` | str, str | 对比两模板页面/样式/骨架差异 |
+| `build_excel(spec_json, output_path)` | str, str | 按 ExcelSpec 生成 xlsx（默认表头美化） |
+| `parse_excel(path, sheet_name?)` | str, str | 解析 xlsx（行数据/合并/列宽） |
+| `excel_to_data(path, sheet_name?)` | str, str | Excel 数据表 → JSON 行数组（batch_build 数据源） |
+| `convert_to_pdf(docx_path, output_path?)` | str, str | docx → PDF（Word/WPS/LibreOffice 降级链） |
+| `pdf_info(path)` | str | PDF 页数/大小 |
 
 ### DocumentSpec JSON 契约（build_docx 输入）
 
 ```json
 {
-  "doc_type": "official|thesis|contract|bidding|general",
+  "doc_type": "official|thesis|contract|bidding|general|legal|government_report|techdoc|resume|notice",
   "title": "文档标题",
   "author": "可选：作者/单位",
   "date": "可选：日期",
@@ -215,7 +231,36 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 {"type": "paragraph", "text": "2026年8月2日", "align": "RIGHT"}
 ```
 
-## 五·五、批量生成（batch_build）
+## 五·四、Excel 表格（build_excel / parse_excel / excel_to_data）
+
+### ExcelSpec 契约（build_excel 输入）
+
+```json
+{"sheets": [{
+  "name": "花名册",
+  "rows": [["姓名", "部门", "职务"], ["张三", "研发部", "工程师"]],
+  "fill": "blue",              // 表头填充色：blue/green/orange/yellow/grey/red 或 hex
+  "styles": {"header": {...}, "body": {...}},   // 可选覆盖
+  "merges": [{"range": "A1:B2"}],
+  "col_widths": {"A": 12},
+  "freeze": "A2",              // 冻结窗格
+  "filter": true,              // 自动筛选
+  "header_row": true           // 首行是否视为表头（false 则首行也是数据）
+}]}
+```
+
+- **默认美化**：首行表头加粗 + 浅蓝填充 + 全表细边框 + 自适应列宽 + 冻结首行 + 自动筛选
+- **最常用场景**：用户给一份 Excel 数据（花名册/清单）→ `excel_to_data` 转 JSON 行数组 → 作为 `batch_build` 的 data_rows 批量生成 Word 文档（如"花名册 → 100 份入职欢迎信"）
+- 用户给 .xlsx 文件要求"转成文档/批量生成"时走此链路
+
+## 五·五、PDF 转换（convert_to_pdf / pdf_info）
+
+- `convert_to_pdf(输入.docx, 输出路径可选)`：引擎自动降级 **Word COM → WPS COM → LibreOffice**
+- 无任何引擎时返回明确错误提示
+- 典型场景：公文/合同生成 docx 后转 PDF 存档或发送；用户说"导出 PDF"时走此流程
+- 生成后可 `pdf_info` 校验页数
+
+## 五·六、批量生成（batch_build）
 
 一个 spec 模板 + 多组数据批量产出文档：
 
@@ -235,7 +280,7 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 - 返回 total/succeeded/failed 统计；未提供的变量替换为空并记入 warnings
 - 适用：批量会议通知、批量证书、批量合同（一份模板 N 组当事人）
 
-## 五·六、模板管理
+## 五·七、模板管理
 
 | 工具 | 场景 |
 |------|------|
@@ -246,11 +291,11 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 
 ## 六、执行约束
 
-1. 输出格式仅 `.docx`（Word 2007+），路径用**绝对路径**
+1. 输出格式按场景选择：`.docx`（Word）/ `.xlsx`（Excel）/ `.pdf`（转换导出），路径用**绝对路径**
 2. 调用 MCP 工具后**必须检查返回的 `ok` 字段**：`ok=false` 时向用户复述 `error` 并终止，不继续
-3. 生成后**必须**调用 `parse_docx` 回读校验，检查点：标题数量与层级和 spec 一致、字号/行距/缩进数值符合预期、eastAsia 中文字体非空、无空正文段、无乱码
+3. 生成后**必须**回读校验：docx 用 `parse_docx`（标题/字号/行距/缩进/eastAsia 字体/无乱码）；xlsx 用 `parse_excel`（行数据/合并）；pdf 用 `pdf_info`（页数/大小）
 4. 中文字体由 build_docx 自动写入 w:eastAsia，**无需**在 spec 中额外设置
-5. 用户未指定输出路径时，默认输出到桌面 `C:/Users/<user>/Desktop/文档/` 子目录（不存在则创建），文件名用 `类型_主题.docx`；中文路径原样传入
+5. 用户未指定输出路径时，默认输出到桌面 `C:/Users/<user>/Desktop/文档/` 子目录（不存在则创建），文件名用 `类型_主题.docx`（Excel 用 `.xlsx`）；中文路径原样传入
 6. `spec_json` 参数需**序列化为 JSON 字符串**传入 build_docx（不是对象）
 7. 注意 import_template 的截断：骨架取前 40 项、样式按 role 归类后每类取 1 条
 8. 党政公文若涉及红头（发文机关标志/发文字号），按 templates/official.md 要素顺序补全，并将红头作为正文首段（居中）处理

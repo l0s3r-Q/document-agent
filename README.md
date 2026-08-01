@@ -25,7 +25,7 @@
 └──────────────┬──────────────┘
                │ DocumentSpec JSON
 ┌──────────────▼──────────────┐
-│  docx-toolkit MCP server    │  手脚：解析 / 生成 / 模板导入
+│  document-toolkit MCP server    │  手脚：解析 / 生成 / 模板导入
 │  (python-docx, FastMCP)      │  （GB/T 9704 等预置排版）
 └──────────────┬──────────────┘
                │
@@ -42,16 +42,16 @@
 
 ```bash
 # 1. 安装依赖
-pip install -r mcp/docx-toolkit/requirements.txt
+pip install -r mcp/document-toolkit/requirements.txt
 ```
 
 ```json
 // 2. 配置 MCP（写入你的工具配置或项目 .mcp.json）
 {
   "mcpServers": {
-    "docx-toolkit": {
+    "document-toolkit": {
       "command": "python",
-      "args": ["<绝对路径>/mcp/docx-toolkit/server.py"]
+      "args": ["<绝对路径>/mcp/document-toolkit/server.py"]
     }
   }
 }
@@ -82,10 +82,11 @@ document-agent/
 │       ├── templates/             # 10 类文档排版规范（人读）
 │       └── examples/              # 典型输入示例
 ├── mcp/
-│   └── docx-toolkit/              # 文档读写 MCP server
-│       ├── server.py              # FastMCP 入口（12 个工具）
-│       ├── docx_toolkit/          # 核心库：parser/builder/styles/templates_store
-│       └── docx_toolkit/templates/  # 机器可读预置模板 JSON
+│   └── document-toolkit/              # 文档读写 MCP server
+│       ├── server.py              # FastMCP 入口（17 个工具）
+│       ├── docx_toolkit/          # Word 模块（解析/生成/模板）
+│       ├── excel_toolkit/          # Excel 模块（生成/解析/数据源）
+│       └── pdf_toolkit/            # PDF 模块（三引擎转换）
 ├── docs/                          # 架构与使用文档
 ├── examples/                      # 示例
 ├── LICENSE                        # MIT
@@ -113,7 +114,8 @@ document-agent/
 - [x] 范文/规范文档导入功能（`import_template`）
 - [x] 更多文档类型（法律文书、政府报告、技术文档、简历、通知公告）
 - [ ] 结构决策增强（自动对比原文件与目标模板的差异）
-- [ ] PDF / Markdown 导出
+- [x] PDF 导出（convert_to_pdf 三引擎降级）
+- [ ] Markdown 导出
 - [ ] 在线 API 服务
 
 ## License

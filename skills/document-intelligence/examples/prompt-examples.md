@@ -53,4 +53,14 @@
 | 22 | "用这个通知模板批量生成 10 个部门的会议通知" | batch_build（模板 + 数据行） |
 | 23 | "把导入的模板重命名/删掉/导出/和内置的对比一下" | rename/delete/export/compare_templates |
 
+## Excel / PDF 场景
+
+| # | 用户输入 | 判定 |
+|---|---------|------|
+| 24 | "把这几个人的信息做成一个花名册 Excel" | build_excel（数据 → 美化表格） |
+| 25 | "用这份花名册（D:/data/花名册.xlsx）批量生成入职欢迎信" | excel_to_data → batch_build 联动 |
+| 26 | "把这份通知（D:/docs/通知.docx）转成 PDF" | convert_to_pdf |
+| 27 | "生成一份季度销售统计报表" | build_excel（样式美化 + 汇总行） |
+| 28 | "看看这个 PDF 有几页" | pdf_info |
+
 ## 复合/模糊场景

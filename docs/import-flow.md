@@ -19,7 +19,7 @@
 └──────────┬───────────────┘
            ▼
    用户模板 JSON 保存至
-   mcp/docx-toolkit/user_templates/<name>.json
+   mcp/document-toolkit/user_templates/<name>.json
    （meta.source = "user"）
            │
            ▼

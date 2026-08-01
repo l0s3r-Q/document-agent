@@ -1,4 +1,4 @@
-# docx-toolkit MCP Server
+# document-toolkit MCP Server
 
 文档读写工具箱：解析 `.docx` 结构/样式、按规范生成文档、导入范文为模板。
 
@@ -13,9 +13,9 @@ pip install -r requirements.txt
 ```json
 {
   "mcpServers": {
-    "docx-toolkit": {
+    "document-toolkit": {
       "command": "python",
-      "args": ["C:/Users/<your-username>/skills/mcp/docx-toolkit/server.py"]
+      "args": ["C:/Users/<your-username>/skills/mcp/document-toolkit/server.py"]
     }
   }
 }
@@ -28,6 +28,9 @@ pip install -r requirements.txt
 - Python 3.10+
 - `mcp>=1.26,<2`：mcp 2.x 移除了 FastMCP API，本 server 基于 FastMCP 实现
 - `python-docx>=1.1`：1.1+ 才支持固定行距（EXACTLY）Length 赋值
+- `openpyxl>=3.1`：Excel 生成/解析
+- `pypdf>=4.0`：PDF 元信息读取
+- `pywin32>=306`（仅 Windows）：Word/WPS COM 转换引擎
 
 ## 安全说明
 

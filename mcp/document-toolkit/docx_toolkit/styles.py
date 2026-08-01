@@ -1,4 +1,4 @@
-"""styles.py —— 预置 5 类文档排版规范（doc_type → 页面/字体/段落参数）。"""
+"""styles.py —— 预置 10 类文档排版规范（doc_type → 页面/字体/段落参数）。"""
 
 # 排版参数说明：
 #   line_spacing_rule: "EXACTLY" = 固定值行距（单位磅），"MULTIPLE" = 倍数行距

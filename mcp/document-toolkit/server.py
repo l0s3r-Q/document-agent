@@ -1,6 +1,6 @@
-"""docx-toolkit MCP Server —— 文档解析/生成/模板导入工具箱。
+"""document-toolkit MCP Server —— 文档解析/生成/模板导入工具箱。
 
-工具（12）：
+工具（17）：
   - parse_docx(path)            解析 docx 页面/样式/结构
   - extract_structure(path)     仅提取标题结构树（不改结构场景）
   - build_docx(spec_json, out)  按 DocumentSpec 生成 docx
@@ -13,6 +13,11 @@
   - delete_template(name)       删除用户模板
   - export_template(n, out)     导出模板 JSON
   - compare_templates(a, b)     对比两模板差异
+  - build_excel(spec, out)      按 ExcelSpec 生成 xlsx（含美化）
+  - parse_excel(path, sheet?)   解析 xlsx
+  - excel_to_data(path, sheet?) Excel 数据表 → JSON 行数组（批量数据源）
+  - convert_to_pdf(docx, out?)  docx → PDF（Word/WPS/LibreOffice 降级链）
+  - pdf_info(path)              PDF 元信息（页数/大小）
 
 启动：python server.py  （stdio 传输，FastMCP）
 """
@@ -41,6 +46,10 @@ from docx_toolkit.templates_store import (
 )
 from docx_toolkit.batch import batch_build as _batch_build
 from docx_toolkit.restructure import suggest_restructure as _suggest_restructure
+from excel_toolkit.builder import build as _build_excel
+from excel_toolkit.parser import parse as _parse_excel
+from excel_toolkit.parser import to_data as _excel_to_data
+from pdf_toolkit.converter import convert as _pdf_convert
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -63,7 +72,7 @@ try:
 except Exception:  # noqa: BLE001  补丁失败不影响启动（旧 pydantic 无需补丁）
     pass
 
-mcp = FastMCP("docx-toolkit")
+mcp = FastMCP("document-toolkit")
 
 
 def _ok(data) -> str:
@@ -232,6 +241,72 @@ def export_template(name: str, output_path: str) -> str:
 def compare_templates(name_a: str, name_b: str) -> str:
     """对比两个模板的页面/样式/骨架差异。"""
     return _ok(_compare_templates(name_a, name_b))
+
+
+
+
+# ══════════════════════════ Excel 工具 ══════════════════════════
+
+@mcp.tool()
+def build_excel(spec_json: str, output_path: str) -> str:
+    """按 ExcelSpec JSON 生成 .xlsx 报表：sheets 含 rows/styles/merges/col_widths/freeze/filter；默认表头美化（加粗+浅蓝填充+边框+自适应列宽）。"""
+    try:
+        spec = json.loads(spec_json)
+        if not isinstance(spec, dict):
+            return _err("spec_json 必须是 JSON 对象")
+        return _ok(_build_excel(spec, output_path))
+    except json.JSONDecodeError as e:
+        return _err(f"spec_json 不是合法 JSON: {e}")
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def parse_excel(path: str, sheet_name: str = "") -> str:
+    """解析 .xlsx：返回各 sheet 的行数据/合并单元格/列宽。sheet_name 为空解析全部。"""
+    try:
+        return _ok(_parse_excel(path, sheet_name or None))
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def excel_to_data(path: str, sheet_name: str = "") -> str:
+    """把 Excel 数据表转为 JSON 行数组（首行为字段名），可直接作为 batch_build 的 data_rows 数据源。"""
+    try:
+        return _ok(_excel_to_data(path, sheet_name or None))
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+# ══════════════════════════ PDF 工具 ══════════════════════════
+
+@mcp.tool()
+def convert_to_pdf(docx_path: str, output_path: str = "") -> str:
+    """docx → PDF 转换。自动引擎降级：Word COM → WPS COM → LibreOffice headless。"""
+    try:
+        return _ok(_pdf_convert(docx_path, output_path or None))
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def pdf_info(path: str) -> str:
+    """读取 PDF 元信息（页数/文件大小）。"""
+    try:
+        if not os.path.exists(path):
+            return _err(f"文件不存在: {path}")
+        try:
+            from pypdf import PdfReader
+        except ImportError:
+            return _err("缺少依赖 pypdf：请执行 pip install pypdf")
+        with open(path, "rb") as f:
+            reader = PdfReader(f)
+            pages = len(reader.pages)
+        return _ok({"path": path, "pages": pages,
+                    "size_bytes": os.path.getsize(path)})
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
 
 
 if __name__ == "__main__":
