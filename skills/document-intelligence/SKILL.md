@@ -1,18 +1,18 @@
 ---
 name: document-intelligence
-description: 文档智能写作代理。理解用户自然语言需求，自动识别文档类型（通用文档/学位论文/党政公文/合同协议/招投标文书/法律文书/政府工作报告/技术文档/简历/通知公告/Excel表格/PDF转换），决策结构策略（从零生成/改结构/不改结构），按规范排版生成 .docx/.xlsx/.pdf；支持批量生成、模板导入与管理、结构改造建议。触发词：文档、公文、通知、公告、报告、方案、论文、合同、协议、招标、投标、纪要、起诉状、律师函、简历、政府工作报告、需求说明书、Excel、表格、报表、xlsx、PDF、导出PDF、转换PDF、润色、改写、排版、格式、范文、模板导入、批量。
+description: 文档智能写作代理。理解用户自然语言需求，自动识别文档类型（通用文档/学位论文/党政公文/合同协议/招投标文书/法律文书/政府工作报告/技术文档/简历/通知公告/Excel表格/PDF转换/PPT演示），决策结构策略（从零生成/改结构/不改结构），按规范排版生成 .docx/.xlsx/.pdf/.pptx；支持批量生成、模板导入与管理、结构改造建议。触发词：文档、公文、通知、公告、报告、方案、论文、合同、协议、招标、投标、纪要、起诉状、律师函、简历、政府工作报告、需求说明书、Excel、表格、报表、xlsx、PDF、导出PDF、转换PDF、PPT、演示、幻灯片、pptx、润色、改写、排版、格式、范文、模板导入、批量。
 ---
 
 # document-intelligence —— 文档智能写作代理
 
 ## 能力概述
 
-输入用户自然语言 → 判定文档类型 → 决策结构策略 → 制定写作计划 → 调用 document-toolkit MCP 解析/生成 → 输出成品 `.docx` / `.xlsx` / `.pdf`。
+输入用户自然语言 → 判定文档类型 → 决策结构策略 → 制定写作计划 → 调用 document-toolkit MCP 解析/生成 → 输出成品 `.docx` / `.xlsx` / `.pdf` / `.pptx`。
 
 四层工作流：
 
 1. **意图识别**：从用户描述中提取文档类型、主题、要求
-2. **类型判定**：映射到 10 类规范 + 2 类格式（official/thesis/contract/bidding/general/legal/government_report/techdoc/resume/notice + excel/pdf）
+2. **类型判定**：映射到 10 类规范 + 3 类格式（official/thesis/contract/bidding/general/legal/government_report/techdoc/resume/notice + excel/pdf/ppt）
 3. **结构决策**：根据"是否有输入文件"和"是否要求改结构"选择策略
 4. **计划与执行**：章节规划 → 内容要点 → 排版参数 → 生成 → 回读校验
 
@@ -32,6 +32,7 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 | 通知公告、放假通知、会议通知、活动通知、停水停电通知、放假公告、公司公告、社区公告 | 通知公告 | notice |
 | Excel、表格、报表、数据表、花名册、Excel清单、数据清单、xlsx、统计表 | Excel 表格 | excel |
 | PDF、导出PDF、转成PDF、转PDF、生成PDF | PDF 转换 | pdf |
+| PPT、演示文稿、幻灯片、汇报演示、路演、pptx、做PPT | PPT 演示 | ppt |
 
 判定规则（按优先级）：
 1. **明确改写指令优先**："改成X/按X格式/按X规范" → 以**目标类型**为准（如"把方案改成招标公告"→ bidding）
@@ -39,10 +40,10 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 3. 等长冲突时按表序（official > thesis > contract > bidding > legal > government_report > techdoc > resume > notice > excel > pdf > general）
 4. **"通知/公告"语境规则**：出现"公司/社区/单位内部/放假/活动"等非党政语境 → notice；出现"红头/发文/机关" → official
 5. **"报告/纪要"默认归 general**（工作总结报告、会议纪要），除非明确"政府工作报告"（→ government_report）或公文体裁词
-6. **Excel/PDF 指令独立判定**："做/生成/导出 XX 表格/报表/花名册" → excel；"转 PDF/导出 PDF" → pdf（与文档类型并行）
+6. **Excel/PDF/PPT 指令独立判定**："做/生成/导出 XX 表格/报表/花名册" → excel；"转 PDF/导出 PDF" → pdf；"做 PPT/做演示/生成幻灯片" → ppt（与文档类型并行，且当动词为 做/生成/导出/转、宾语为表格/报表/PDF/演示类时**优先于** doc_type 判定）
 7. 无法判定时默认 general。
 
-> **注意**：excel/pdf 仅用于意图判定，**不**是 get_template/build_docx 的合法 doc_type（get_template 仅支持 10 类 docx 类型）。
+> **注意**：excel/pdf/ppt 仅用于意图判定，**不**是 get_template/build_docx 的合法 doc_type（get_template 仅支持 10 类 docx 类型）。
 
 ## 二、结构决策树（必须执行）
 
@@ -161,6 +162,8 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 | `excel_to_data(path, sheet_name?)` | str, str | Excel 数据表 → JSON 行数组（batch_build 数据源） |
 | `convert_to_pdf(docx_path, output_path?)` | str, str | docx → PDF（Word/WPS/LibreOffice 降级链） |
 | `pdf_info(path)` | str | PDF 页数/大小 |
+| `build_pptx(spec_json, output_path)` | str, str | 按 PptxSpec 生成 pptx（8 版式/4 主题） |
+| `parse_pptx(path)` | str | 解析 pptx（页/形状/表格） |
 
 ### DocumentSpec JSON 契约（build_docx 输入）
 
@@ -260,7 +263,33 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 - 典型场景：公文/合同生成 docx 后转 PDF 存档或发送；用户说"导出 PDF"时走此流程
 - 生成后可 `pdf_info` 校验页数
 
-## 五·六、批量生成（batch_build）
+## 五·六、PPT 演示（build_pptx / parse_pptx）
+
+### PptxSpec 契约（build_pptx 输入）
+
+```json
+{"title": "演示标题", "subtitle": "副标题", "author": "作者",
+ "theme": "corporate|academic|launch|minimal",   // 商务/学术/发布会/极简
+ "size": "16:9|4:3",
+ "slides": [
+   {"type": "cover", "title": "封面标题", "subtitle": "副标题"},
+   {"type": "agenda", "items": ["一、...", "二、..."]},
+   {"type": "section", "title": "章节标题"},
+   {"type": "content", "title": "页面标题", "bullets": ["要点", "> 子要点"]},
+   {"type": "two_column", "title": "...", "left": {"title": "...", "bullets": [...]}, "right": {...}},
+   {"type": "table", "title": "...", "rows": [["列1","列2"],["值1","值2"]], "header_row": true},   // header_row 可选，false 则首行非表头
+   {"type": "image", "title": "...", "path": "图片路径", "caption": "..."},
+   {"type": "closing", "title": "谢谢", "subtitle": "联系方式"}
+ ]}
+```
+
+- **版式**：cover 封面 / agenda 目录 / section 章节页 / content 内容页（要点+子要点）/ two_column 双栏对比 / table 表格页（表头主色填充）/ image 图片页 / closing 结尾页
+- **主题**：corporate 商务（深蓝）、academic 学术（深红）、launch 发布会（黑底金字）、minimal 极简（灰白）
+- 生成的是**可编辑原生形状**（文本框/表格/图片，非截图），Word/WPS/PowerPoint 均可继续编辑
+- **已有 PPT 修改**：`parse_pptx` 解析现有文件 → 提取各页结构 → 修改内容后 `build_pptx` 重建
+- **高级 PPT 需求**（复杂设计、SVG 精细排版、AI 配图、模板填充增强）→ 使用 `ppt-master` skill（第三方开源专家工作流：github.com/hugohe3/ppt-master，MIT 许可 © Hugo He；环境中未安装时可引导用户获取）
+
+## 五·七、批量生成（batch_build）
 
 一个 spec 模板 + 多组数据批量产出文档：
 
@@ -280,7 +309,7 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 - 返回 total/succeeded/failed 统计；未提供的变量替换为空并记入 warnings
 - 适用：批量会议通知、批量证书、批量合同（一份模板 N 组当事人）
 
-## 五·七、模板管理
+## 五·八、模板管理
 
 | 工具 | 场景 |
 |------|------|
@@ -291,11 +320,11 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 
 ## 六、执行约束
 
-1. 输出格式按场景选择：`.docx`（Word）/ `.xlsx`（Excel）/ `.pdf`（转换导出），路径用**绝对路径**
+1. 输出格式按场景选择：`.docx`（Word）/ `.xlsx`（Excel）/ `.pdf`（转换导出）/ `.pptx`（PPT），路径用**绝对路径**
 2. 调用 MCP 工具后**必须检查返回的 `ok` 字段**：`ok=false` 时向用户复述 `error` 并终止，不继续
-3. 生成后**必须**回读校验：docx 用 `parse_docx`（标题/字号/行距/缩进/eastAsia 字体/无乱码）；xlsx 用 `parse_excel`（行数据/合并）；pdf 用 `pdf_info`（页数/大小）
+3. 生成后**必须**回读校验：docx 用 `parse_docx`（标题/字号/行距/缩进/eastAsia 字体/无乱码）；xlsx 用 `parse_excel`（行数据/合并）；pdf 用 `pdf_info`（页数/大小）；pptx 用 `parse_pptx`（页数/形状/表格）
 4. 中文字体由 build_docx 自动写入 w:eastAsia，**无需**在 spec 中额外设置
-5. 用户未指定输出路径时，默认输出到桌面 `C:/Users/<user>/Desktop/文档/` 子目录（不存在则创建），文件名用 `类型_主题.docx`（Excel 用 `.xlsx`）；中文路径原样传入
+5. 用户未指定输出路径时，默认输出到桌面 `C:/Users/<user>/Desktop/文档/` 子目录（不存在则创建），文件名用 `类型_主题.docx`（Excel 用 `.xlsx`，PPT 用 `.pptx`）；中文路径原样传入
 6. `spec_json` 参数需**序列化为 JSON 字符串**传入 build_docx（不是对象）
 7. 注意 import_template 的截断：骨架取前 40 项、样式按 role 归类后每类取 1 条
 8. 党政公文若涉及红头（发文机关标志/发文字号），按 templates/official.md 要素顺序补全，并将红头作为正文首段（居中）处理

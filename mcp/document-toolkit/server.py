@@ -1,6 +1,6 @@
 """document-toolkit MCP Server —— 文档解析/生成/模板导入工具箱。
 
-工具（17）：
+工具（19）：
   - parse_docx(path)            解析 docx 页面/样式/结构
   - extract_structure(path)     仅提取标题结构树（不改结构场景）
   - build_docx(spec_json, out)  按 DocumentSpec 生成 docx
@@ -18,6 +18,8 @@
   - excel_to_data(path, sheet?) Excel 数据表 → JSON 行数组（批量数据源）
   - convert_to_pdf(docx, out?)  docx → PDF（Word/WPS/LibreOffice 降级链）
   - pdf_info(path)              PDF 元信息（页数/大小）
+  - build_pptx(spec, out)       按 PptxSpec 生成 pptx（8 版式/4 主题）
+  - parse_pptx(path)            解析 pptx（页/形状/表格）
 
 启动：python server.py  （stdio 传输，FastMCP）
 """
@@ -45,6 +47,8 @@ import docx_toolkit.templates_store
 import excel_toolkit.builder
 import excel_toolkit.parser
 import pdf_toolkit.converter
+import pptx_toolkit.builder
+import pptx_toolkit.parser
 
 # ── 热重载机制：监听源码 mtime，变化时按依赖顺序 reload 模块 ──
 _HOT_RELOAD_ORDER = [
@@ -57,6 +61,9 @@ _HOT_RELOAD_ORDER = [
     "excel_toolkit.builder",
     "excel_toolkit.parser",
     "pdf_toolkit.converter",
+    "pptx_toolkit.themes",
+    "pptx_toolkit.builder",
+    "pptx_toolkit.parser",
 ]
 _SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 _hot_last_check = 0.0
@@ -364,6 +371,33 @@ def pdf_info(path: str) -> str:
             pages = len(reader.pages)
         return _ok({"path": path, "pages": pages,
                     "size_bytes": os.path.getsize(path)})
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+# ══════════════════════════ PPT 工具 ══════════════════════════
+
+@mcp.tool()
+def build_pptx(spec_json: str, output_path: str) -> str:
+    """按 PptxSpec JSON 生成 .pptx：slides 支持 cover/agenda/section/content/two_column/table/image/closing 8 版式，theme 支持 corporate/academic/launch/minimal。"""
+    _hot_reload()
+    try:
+        spec = json.loads(spec_json)
+        if not isinstance(spec, dict):
+            return _err("spec_json 必须是 JSON 对象")
+        return _ok(pptx_toolkit.builder.build(spec, output_path))
+    except json.JSONDecodeError as e:
+        return _err(f"spec_json 不是合法 JSON: {e}")
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def parse_pptx(path: str) -> str:
+    """解析 .pptx：返回各页形状/文本/表格结构。"""
+    _hot_reload()
+    try:
+        return _ok(pptx_toolkit.parser.parse(path))
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 
