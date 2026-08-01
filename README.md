@@ -3,7 +3,7 @@
 > 一个与工具无关的文档智能写作代理：理解自然语言需求，自动识别文档类型，按规范排版生成 `.docx`。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/<your-org>/document-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-org>/document-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/l0s3r-Q/document-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/l0s3r-Q/document-agent/actions/workflows/ci.yml)
 
 ## 它能做什么
 
