@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "name": "合同协议",
+    "doc_type": "contract",
+    "source": "builtin",
+    "description": "通用合同协议规范：标题二号宋体加粗居中，正文宋体四号1.5倍行距，含必备法定条款",
+    "skeleton_hint": "标题 → 合同编号 → 当事人信息 → 鉴于条款 → 第一条…（标的/数量/价款/履行/违约/争议）→ 签署栏"
+  },
+  "page": {"top_cm": 2.54, "bottom_cm": 2.54, "left_cm": 3.17, "right_cm": 3.17},
+  "styles": [
+    {"role": "title", "font_name": "宋体", "size_pt": 22, "bold": true, "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+    {"role": "heading1", "font_name": "黑体", "size_pt": 14, "bold": false, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+    {"role": "heading2", "font_name": "宋体", "size_pt": 14, "bold": true, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+    {"role": "heading3", "font_name": "宋体", "size_pt": 12, "bold": true, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+    {"role": "body", "font_name": "宋体", "size_pt": 14, "bold": false, "align": "JUSTIFY", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5, "first_line_indent_chars": 2},
+    {"role": "table", "font_name": "宋体", "size_pt": 12, "bold": false, "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.0}
+  ],
+  "skeleton": [
+    {"level": 0, "text": "合同标题（如：XX设备采购合同）"},
+    {"level": 0, "text": "合同编号、签订地点/时间"},
+    {"level": 0, "text": "甲方/乙方当事人信息（名称、统一社会信用代码、地址、联系人）"},
+    {"level": 0, "text": "鉴于条款（合同目的与背景）"},
+    {"level": 1, "text": "第一条 合同标的与数量"},
+    {"level": 1, "text": "第二条 质量与技术要求"},
+    {"level": 1, "text": "第三条 价款与支付方式"},
+    {"level": 1, "text": "第四条 履行期限、地点和方式"},
+    {"level": 1, "text": "第五条 违约责任"},
+    {"level": 1, "text": "第六条 保密条款"},
+    {"level": 1, "text": "第七条 争议解决（协商/仲裁/诉讼）"},
+    {"level": 0, "text": "签署栏（甲方盖章/法定代表人/日期，乙方盖章/法定代表人/日期）"}
+  ]
+}

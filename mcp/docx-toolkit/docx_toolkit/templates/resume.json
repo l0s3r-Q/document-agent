@@ -1,0 +1,22 @@
+{
+  "meta": {"name": "简历", "doc_type": "resume", "source": "builtin", "description": "简历规范：姓名标题微软雅黑 24pt，分栏式结构；个人信息/教育/工作经历/技能/自我评价", "skeleton_hint": "姓名+求职意向 → 个人信息表 → 教育背景 → 工作/实习经历 → 专业技能 → 自我评价"},
+  "page": {"top_cm": 2.0, "bottom_cm": 2.0, "left_cm": 2.5, "right_cm": 2.5},
+  "styles": [
+    {"role": "title", "font_name": "微软雅黑", "size_pt": 24, "bold": true, "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.2},
+    {"role": "heading1", "font_name": "微软雅黑", "size_pt": 14, "bold": true, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.2},
+    {"role": "heading2", "font_name": "微软雅黑", "size_pt": 12, "bold": true, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.2},
+    {"role": "heading3", "font_name": "微软雅黑", "size_pt": 11, "bold": false, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.2},
+    {"role": "body", "font_name": "宋体", "size_pt": 11, "bold": false, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.2},
+    {"role": "table", "font_name": "宋体", "size_pt": 10.5, "bold": false, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.0}
+  ],
+  "skeleton": [
+    {"level": 0, "text": "姓名（大号）"},
+    {"level": 0, "text": "求职意向：XX岗位（居中）"},
+    {"level": 0, "text": "个人信息表（电话/邮箱/籍贯/出生年月）"},
+    {"level": 1, "text": "教育背景（学校/专业/时间/主修课程）"},
+    {"level": 1, "text": "工作/实习经历（时间/公司/岗位/职责与成果）"},
+    {"level": 1, "text": "专业技能（逐项列出）"},
+    {"level": 1, "text": "获奖情况（可选）"},
+    {"level": 1, "text": "自我评价（3-5 句）"}
+  ]
+}

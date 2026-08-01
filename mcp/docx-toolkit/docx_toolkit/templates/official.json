@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "name": "党政公文（GB/T 9704-2012）",
+    "doc_type": "official",
+    "source": "builtin",
+    "description": "依据《党政机关公文格式》GB/T 9704-2012：上3.7cm 下3.5cm 左2.8cm 右2.6cm；标题2号小标宋居中；正文3号仿宋_GB2312，行距固定28磅",
+    "skeleton_hint": "标题 → 主送机关 → 正文（一、/（一）/1. 三级标题）→ 附件说明 → 发文机关署名+成文日期 → 附注"
+  },
+  "page": {"top_cm": 3.7, "bottom_cm": 3.5, "left_cm": 2.8, "right_cm": 2.6},
+  "styles": [
+    {"role": "title", "font_name": "方正小标宋简体", "size_pt": 22, "bold": false, "align": "CENTER", "line_spacing_rule": "EXACTLY", "line_spacing_pt": 28},
+    {"role": "heading1", "font_name": "黑体", "size_pt": 16, "bold": false, "align": "LEFT", "line_spacing_rule": "EXACTLY", "line_spacing_pt": 28},
+    {"role": "heading2", "font_name": "楷体_GB2312", "size_pt": 16, "bold": false, "align": "LEFT", "line_spacing_rule": "EXACTLY", "line_spacing_pt": 28},
+    {"role": "heading3", "font_name": "仿宋_GB2312", "size_pt": 16, "bold": true, "align": "LEFT", "line_spacing_rule": "EXACTLY", "line_spacing_pt": 28},
+    {"role": "body", "font_name": "仿宋_GB2312", "size_pt": 16, "bold": false, "align": "JUSTIFY", "line_spacing_rule": "EXACTLY", "line_spacing_pt": 28, "first_line_indent_chars": 2},
+    {"role": "table", "font_name": "仿宋_GB2312", "size_pt": 14, "bold": false, "align": "CENTER", "line_spacing_rule": "EXACTLY", "line_spacing_pt": 22}
+  ],
+  "skeleton": [
+    {"level": 0, "text": "标题（二号小标宋，居中）"},
+    {"level": 0, "text": "主送机关"},
+    {"level": 1, "text": "正文一级标题（黑体）"},
+    {"level": 2, "text": "正文二级标题（楷体）"},
+    {"level": 3, "text": "正文三级标题（仿宋加粗）"},
+    {"level": 0, "text": "正文段落（仿宋，首行缩进2字符）"},
+    {"level": 0, "text": "附件说明"},
+    {"level": 0, "text": "发文机关署名、成文日期（右对齐）"},
+    {"level": 0, "text": "附注"}
+  ]
+}

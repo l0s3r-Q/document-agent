@@ -1,0 +1,4 @@
+# mcp<2: mcp 2.x 移除了 FastMCP API；本 server 基于 FastMCP 实现（含 pydantic 兼容补丁，见 server.py 顶部）
+mcp>=1.26,<2
+# python-docx>=1.1: 1.1+ 才支持固定行距 EXACTLY 的 Length 赋值
+python-docx>=1.1

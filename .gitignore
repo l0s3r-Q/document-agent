@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Node
+node_modules/
+
+# 编辑器
+.idea/
+.vscode/
+
+# 系统
+Thumbs.db
+.DS_Store
+
+# 文档生成产物
+examples/output/
+mcp/docx-toolkit/user_templates/
+
+# MCP 本地配置（含绝对路径，勿提交）
+.mcp.json
+
+# 测试
+.pytest_cache/
+*.log
