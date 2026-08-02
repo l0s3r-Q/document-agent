@@ -174,6 +174,7 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
   "author": "可选：作者/单位",
   "date": "可选：日期",
   "page": {"top_cm": 3.7, "bottom_cm": 3.5, "left_cm": 2.8, "right_cm": 2.6},
+  "header": "可选：页眉文字", "footer": "可选：页脚文字", "page_number": true,
   "sections": [
     {"type": "heading1|heading2|heading3", "text": "章节标题"},
     {"type": "paragraph", "text": "正文段落"},
@@ -281,12 +282,13 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
    {"type": "section", "title": "章节标题", "index": "01"},   // index 显示编号圆点
    {"type": "two_column", "title": "...", "left": {"title": "...", "bullets": [...]}, "right": {...}},
    {"type": "table", "title": "...", "rows": [["列1","列2"],["值1","值2"]], "header_row": true},   // header_row 可选，false 则首行非表头
+   {"type": "chart", "title": "...", "chart_type": "column|bar|line|pie", "categories": ["1月","2月"], "series": [{"name": "系列", "values": [10,20]}]},   // 原生图表
    {"type": "image", "title": "...", "path": "图片路径", "caption": "..."},
    {"type": "closing", "title": "谢谢", "subtitle": "联系方式"}
  ]}
 ```
 
-- **版式**：cover 封面 / agenda 目录 / section 章节页（可加编号圆点 `index`）/ content 内容页（要点列表**或 cards 卡片化**）/ stats 大数字数据卡片 / two_column 双栏对比 / table 表格页（表头主色填充）/ image 图片页 / closing 结尾页
+- **版式**：cover 封面 / agenda 目录 / section 章节页（可加编号圆点 `index`）/ content 内容页（要点列表**或 cards 卡片化**）/ stats 大数字数据卡片 / chart 原生图表页（柱/条/线/饼）/ two_column 双栏对比 / table 表格页（表头主色填充）/ image 图片页 / closing 结尾页
 - **主题**：corporate 商务（深蓝装饰）、academic 学术（深红装饰）、launch 发布会（黑底白字）、minimal 极简（灰白）
 - **颜色约束**：标题与正文文字**默认黑色**；主题色仅用于装饰（标题条背景/表格表头/强调线）；需要彩色标题时用 slide 级 `title_color`（如 `"#1F4E79"`）覆盖
 - 生成的是**可编辑原生形状**（文本框/表格/图片，非截图），Word/WPS/PowerPoint 均可继续编辑

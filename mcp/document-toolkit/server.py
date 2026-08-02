@@ -1,6 +1,6 @@
 """document-toolkit MCP Server —— 文档解析/生成/模板导入工具箱。
 
-工具（19）：
+工具（22）：
   - parse_docx(path)            解析 docx 页面/样式/结构
   - extract_structure(path)     仅提取标题结构树（不改结构场景）
   - build_docx(spec_json, out)  按 DocumentSpec 生成 docx
@@ -20,6 +20,9 @@
   - pdf_info(path)              PDF 元信息（页数/大小）
   - build_pptx(spec, out)       按 PptxSpec 生成 pptx（8 版式/4 主题）
   - parse_pptx(path)            解析 pptx（页/形状/表格）
+  - docx_tables_to_excel(d,o)  docx 表格 → xlsx
+  - excel_to_docx(e,o)         xlsx → docx 表格文档
+  - docx_to_markdown(d,o)      docx → Markdown
 
 启动：python server.py  （stdio 传输，FastMCP）
 """
@@ -57,6 +60,7 @@ _HOT_RELOAD_ORDER = [
     "docx_toolkit.parser",
     "docx_toolkit.builder",
     "docx_toolkit.batch",
+    "docx_toolkit.markdown",
     "docx_toolkit.restructure",
     "excel_toolkit.builder",
     "excel_toolkit.parser",
@@ -421,6 +425,63 @@ def parse_pptx(path: str) -> str:
     _hot_reload()
     try:
         return _ok(pptx_toolkit.parser.parse(path))
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+# ══════════════════════════ 互转工具 ══════════════════════════
+
+@mcp.tool()
+def docx_tables_to_excel(docx_path: str, output_path: str) -> str:
+    """提取 docx 中全部表格 → 生成 xlsx（每表一个 sheet，自动命名）。"""
+    _hot_reload()
+    try:
+        data = docx_toolkit.parser.parse(docx_path)
+        tables = [s for s in data["structure"] if s["type"] == "table"]
+        if not tables:
+            return _err(f"文档中未找到表格: {docx_path}")
+        sheets = []
+        for i, t in enumerate(tables, 1):
+            rows = t.get("rows", [])
+            if not rows:
+                continue
+            sheets.append({"name": f"表{i}", "rows": rows, "fill": "blue"})
+        if not sheets:
+            return _err("表格为空")
+        return _ok(excel_toolkit.builder.build({"sheets": sheets}, output_path))
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def excel_to_docx(excel_path: str, output_path: str, with_sheet_titles: bool = True) -> str:
+    """xlsx → docx：每 sheet 生成一个表格（可选带 sheet 名标题）。"""
+    _hot_reload()
+    try:
+        data = excel_toolkit.parser.parse(excel_path)
+        sheets = data.get("sheets", [])
+        if not sheets:
+            return _err("未找到 sheet")
+        sections = []
+        for sh in sheets:
+            if with_sheet_titles and sh.get("name"):
+                sections.append({"type": "heading2", "text": sh["name"]})
+            rows = sh.get("rows", [])
+            if rows:
+                sections.append({"type": "table", "rows": rows})
+        spec = {"doc_type": "general", "title": os.path.splitext(os.path.basename(excel_path))[0],
+                "sections": sections}
+        return _ok(docx_toolkit.builder.build(spec, output_path))
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def docx_to_markdown(docx_path: str, output_path: str = "") -> str:
+    """docx → Markdown：标题/正文/表格/列表完整转换。"""
+    _hot_reload()
+    try:
+        return _ok(docx_toolkit.markdown.to_markdown(docx_path, output_path or None))
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 

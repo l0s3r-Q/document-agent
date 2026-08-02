@@ -7,6 +7,7 @@ import os
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING, WD_BREAK
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
@@ -88,6 +89,32 @@ def build(spec: dict, output_path: str) -> dict:
     sec.bottom_margin = Cm(page.get("bottom_cm", 2.54))
     sec.left_margin = Cm(page.get("left_cm", 3.17))
     sec.right_margin = Cm(page.get("right_cm", 3.17))
+
+    # ── 页眉 / 页脚 / 页码（spec.header / spec.footer / spec.page_number）──
+    if spec.get("header"):
+        sec.header.is_linked_to_previous = False
+        hp = sec.header.paragraphs[0]
+        hp.text = ""
+        hr = hp.add_run(spec["header"])
+        _set_run_font(hr, "宋体", 10, False)
+    if spec.get("footer"):
+        sec.footer.is_linked_to_previous = False
+        fp = sec.footer.paragraphs[0]
+        fp.text = ""
+        fr = fp.add_run(spec["footer"])
+        _set_run_font(fr, "宋体", 10, False)
+    if spec.get("page_number"):
+        sec.footer.is_linked_to_previous = False
+        pnum_p = sec.footer.paragraphs[0]
+        pnum_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        fld = OxmlElement("w:fldSimple")
+        fld.set(qn("w:instr"), "PAGE")
+        r = OxmlElement("w:r")
+        t = OxmlElement("w:t")
+        t.text = "1"
+        r.append(t)
+        fld.append(r)
+        pnum_p._p.append(fld)
 
     spec_styles = spec.get("styles") or {}
 

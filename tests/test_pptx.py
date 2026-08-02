@@ -88,3 +88,16 @@ def test_pptx_enhanced_layouts(tmp_path):
     sec_page = data["slides"][0]
     sec_texts = [t for sh in sec_page["shapes"] if sh.get("texts") for t in sh["texts"]]
     assert "01" in sec_texts
+
+
+def test_pptx_chart(tmp_path):
+    """原生图表版式（柱状/饼图）。"""
+    spec = {"title": "图表", "theme": "corporate", "slides": [
+        {"type": "chart", "title": "趋势", "chart_type": "column",
+         "categories": ["1月", "2月"], "series": [{"name": "量", "values": [10, 20]}]},
+        {"type": "chart", "title": "占比", "chart_type": "pie",
+         "categories": ["A", "B"], "series": [{"name": "p", "values": [60, 40]}]},
+    ]}
+    out = str(tmp_path / "c.pptx")
+    r = build(spec, out)
+    assert r["ok"] and r["slides"] == 2

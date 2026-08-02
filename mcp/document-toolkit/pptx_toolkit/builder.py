@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 
 from pptx import Presentation
+from pptx.chart.data import CategoryChartData
 from pptx.dml.color import RGBColor
+from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.oxml.ns import qn
@@ -298,6 +300,30 @@ def build(spec: dict, output_path: str) -> dict:
             if s.get("caption"):
                 _add_text_box(slide, lay["content_left"], 6.4, lay["content_w"], 0.5, s["caption"],
                               14, False, _hex(theme["secondary"]))
+
+        elif stype == "chart":
+            # 原生图表：chart_type: column|bar|line|pie; categories; series[{name, values}]
+            _add_title_bar(slide, s.get("title", ""), theme, lay["bar_w"])
+            chart_type = {
+                "column": XL_CHART_TYPE.COLUMN_CLUSTERED,
+                "bar": XL_CHART_TYPE.BAR_CLUSTERED,
+                "line": XL_CHART_TYPE.LINE_MARKERS,
+                "pie": XL_CHART_TYPE.PIE,
+            }.get(s.get("chart_type", "column"), XL_CHART_TYPE.COLUMN_CLUSTERED)
+            cats = s.get("categories", [])
+            series = s.get("series", [])
+            if cats and series:
+                cd = CategoryChartData()
+                cd.categories = cats
+                for sr in series:
+                    cd.add_series(sr.get("name", ""), tuple(sr.get("values", [])))
+                gf = slide.shapes.add_chart(chart_type,
+                                            Inches(lay["content_left"]), Inches(1.6),
+                                            Inches(lay["content_w"]), Inches(4.8), cd)
+                chart = gf.chart
+                chart.has_legend = True
+                chart.legend.position = XL_LEGEND_POSITION.BOTTOM
+                chart.legend.include_in_layout = False
 
         elif stype == "closing":
             tcolor = _hex(s.get("title_color") or theme.get("title", "000000"))
