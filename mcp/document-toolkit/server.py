@@ -1,6 +1,6 @@
 """document-toolkit MCP Server —— 文档解析/生成/模板导入工具箱。
 
-工具（22）：
+工具（23）：
   - parse_docx(path)            解析 docx 页面/样式/结构
   - extract_structure(path)     仅提取标题结构树（不改结构场景）
   - build_docx(spec_json, out)  按 DocumentSpec 生成 docx
@@ -23,6 +23,7 @@
   - docx_tables_to_excel(d,o)  docx 表格 → xlsx
   - excel_to_docx(e,o)         xlsx → docx 表格文档
   - docx_to_markdown(d,o)      docx → Markdown
+  - merge_pdfs(paths, out)     合并多个 PDF
 
 启动：python server.py  （stdio 传输，FastMCP）
 """
@@ -482,6 +483,21 @@ def docx_to_markdown(docx_path: str, output_path: str = "") -> str:
     _hot_reload()
     try:
         return _ok(docx_toolkit.markdown.to_markdown(docx_path, output_path or None))
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def merge_pdfs(pdf_paths_json: str, output_path: str) -> str:
+    """合并多个 PDF 为一个文件（pypdf）；缺失文件自动跳过并警告。"""
+    _hot_reload()
+    try:
+        paths = json.loads(pdf_paths_json)
+        if not isinstance(paths, list):
+            return _err("pdf_paths_json 必须是数组")
+        return _ok(pdf_toolkit.converter.merge_pdfs(paths, output_path))
+    except json.JSONDecodeError as e:
+        return _err(f"JSON 解析失败: {e}")
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 

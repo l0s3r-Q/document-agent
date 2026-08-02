@@ -184,3 +184,31 @@ def convert(docx_path: str, output_path: str | None = None) -> dict:
             except Exception as e:  # noqa: BLE001
                 errors.append(f"{engine}: {type(e).__name__}: {str(e)[:120]}")
     return {"ok": False, "error": "所有引擎均失败", "engine_errors": errors}
+
+
+def merge_pdfs(pdf_paths: list[str], output_path: str) -> dict:
+    """合并多个 PDF 为一个（pypdf）。"""
+    if not pdf_paths:
+        return {"ok": False, "error": "pdf_paths 不能为空"}
+    if not output_path.lower().endswith(".pdf"):
+        return {"ok": False, "error": "输出路径必须以 .pdf 结尾"}
+    try:
+        from pypdf import PdfWriter
+    except ImportError:
+        return {"ok": False, "error": "缺少依赖 pypdf：请执行 pip install pypdf"}
+    writer = PdfWriter()
+    missing = []
+    for p in pdf_paths:
+        if not os.path.exists(p):
+            missing.append(p)
+            continue
+        writer.append(p)
+    if not writer.pages:
+        return {"ok": False, "error": "没有可合并的 PDF 文件" + (f"，缺失: {missing}" if missing else "")}
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    with open(output_path, "wb") as f:
+        writer.write(f)
+    result = {"ok": True, "path": output_path, "pages": len(writer.pages)}
+    if missing:
+        result["warnings"] = [f"文件不存在已跳过: {m}" for m in missing]
+    return result

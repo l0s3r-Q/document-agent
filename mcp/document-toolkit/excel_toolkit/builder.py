@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 
 from openpyxl import Workbook
+from openpyxl.chart import BarChart, LineChart, PieChart, Reference
+from openpyxl.chart.label import DataLabelList
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
@@ -112,6 +114,36 @@ def build(spec: dict, output_path: str) -> dict:
             ws.freeze_panes = "A2"
         if sh.get("filter", True) and header_row and len(rows) > 1 and ncols > 0:
             ws.auto_filter.ref = f"A1:{get_column_letter(ncols)}{len(rows)}"
+
+        # 原生图表：charts: [{type: bar|line|pie, title, data_col?, categories_col?}]
+        for chart_spec in sh.get("charts") or []:
+            ctype = chart_spec.get("type", "bar")
+            data_col = chart_spec.get("data_col", 2)   # 1 起，默认第 2 列
+            cats_col = chart_spec.get("categories_col", 1)
+            nrows = len(rows)
+            if nrows < 2:
+                continue
+            if ctype == "pie":
+                chart = PieChart()
+            elif ctype == "line":
+                chart = LineChart()
+            else:
+                chart = BarChart()
+            chart.title = chart_spec.get("title", "")
+            if chart_spec.get("title"):
+                chart.title = chart_spec["title"]
+            chart.height = chart_spec.get("height", 8)
+            chart.width = chart_spec.get("width", 15)
+            # 数据引用：首行为表头（用 Reference 对象）
+            data_ref = Reference(ws, min_col=data_col, min_row=2,
+                                 max_col=data_col, max_row=nrows)
+            cats_ref = Reference(ws, min_col=cats_col, min_row=2,
+                                 max_col=cats_col, max_row=nrows)
+            chart.add_data(data_ref, titles_from_data=False)
+            chart.set_categories(cats_ref)
+            chart.dataLabels = DataLabelList()
+            chart.dataLabels.showVal = ctype != "pie" or chart_spec.get("show_labels", True)
+            ws.add_chart(chart, chart_spec.get("anchor", "F2"))
 
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     wb.save(output_path)

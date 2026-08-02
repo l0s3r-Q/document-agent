@@ -81,6 +81,7 @@ def build(spec: dict, output_path: str) -> dict:
         return {"ok": False, "error": "输出路径必须以 .docx 结尾"}
     doc = Document()
     doc_type = spec.get("doc_type", "general")
+    warnings_list = []
 
     # ── 页面设置 ──────────────────────────────────────────────
     sec = doc.sections[0]
@@ -166,7 +167,33 @@ def build(spec: dict, output_path: str) -> dict:
     # ── 正文各节 ──────────────────────────────────────────────
     for item in spec.get("sections", []):
         stype = item.get("type", "paragraph")
-        if stype == "title":
+        if stype == "toc":
+            # 目录：TOC 域（Word 打开时按 F9 或自动更新；python-docx 无法直接渲染目录条目）
+            p = doc.add_paragraph()
+            fld_char_begin = OxmlElement("w:fldChar")
+            fld_char_begin.set(qn("w:fldCharType"), "begin")
+            instr_text = OxmlElement("w:instrText")
+            instr_text.set(qn("xml:space"), "preserve")
+            _bs = chr(92)  # 反斜杠（避免转义）
+            instr_text.text = f" TOC {_bs}o \"1-3\" {_bs}h {_bs}z {_bs}u "
+            fld_char_sep = OxmlElement("w:fldChar")
+            fld_char_sep.set(qn("w:fldCharType"), "separate")
+            t_el = OxmlElement("w:t")
+            t_el.text = "目录将在打开文档时更新（Word 中按 F9 或点击更新域）"
+            r_placeholder = OxmlElement("w:r")
+            r_placeholder.append(t_el)
+            fld_char_end = OxmlElement("w:fldChar")
+            fld_char_end.set(qn("w:fldCharType"), "end")
+            run = p.add_run()
+            run._r.append(fld_char_begin)
+            run2 = p.add_run()
+            run2._r.append(instr_text)
+            run3 = p.add_run()
+            run3._r.append(fld_char_sep)
+            p._p.append(r_placeholder)
+            run4 = p.add_run()
+            run4._r.append(fld_char_end)
+        elif stype == "title":
             # 文档标题（居中大字段）
             add_paragraph({**item, "align": "CENTER"}, "title")
         elif stype in ("heading1", "heading2", "heading3"):
@@ -181,6 +208,22 @@ def build(spec: dict, output_path: str) -> dict:
             run = p.add_run("—" * 20)
             run.font.size = Pt(10)
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        elif stype == "image":
+            # 插入图片：{path, width_cm?, caption?}
+            img_path = item.get("path", "")
+            if img_path and os.path.exists(img_path):
+                try:
+                    from docx.shared import Cm as _Cm
+                    width = _Cm(item.get("width_cm", 14))
+                    doc.add_picture(img_path, width=width)
+                    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                except Exception as e:  # noqa: BLE001
+                    warnings_list.append(f"图片插入失败: {type(e).__name__}")
+            elif img_path:
+                warnings_list.append(f"图片路径不存在: {img_path}")
+            if item.get("caption"):
+                add_paragraph({"text": item["caption"], "align": "CENTER"}, "body")
+
         elif stype == "list":
             style = _resolve_style(doc_type, "body", item.get("font"), spec_styles)
             for i, it in enumerate(item.get("items", []), 1):
@@ -205,6 +248,25 @@ def build(spec: dict, output_path: str) -> dict:
                     _apply_paragraph_format(p.paragraph_format, style)
                     run = p.add_run(row[ci] if ci < len(row) else "")
                     _set_run_font(run, style.get("font_name"), style.get("size_pt"), style.get("bold"))
+            # 合并单元格：merges: [{from: "A1", to: "B2"}] 或 [{from: [r,c], to: [r,c]}]
+            import re as _re
+            def _coord(c):
+                if isinstance(c, (list, tuple)) and len(c) == 2:
+                    return (int(c[0]) - 1 if isinstance(c[0], int) else int(c[0]), int(c[1]) - 1 if isinstance(c[1], int) else int(c[1]))
+                m = _re.fullmatch(r"([A-Za-z]+)([0-9]+)", str(c))
+                if not m:
+                    return None
+                col = 0
+                for ch in m.group(1).upper():
+                    col = col * 26 + (ord(ch) - 64)
+                return (int(m.group(2)) - 1, col - 1)
+            for m in item.get("merges") or []:
+                try:
+                    c1, c2 = _coord(m["from"]), _coord(m["to"])
+                    if c1 and c2:
+                        table.cell(*c1).merge(table.cell(*c2))
+                except (KeyError, IndexError, ValueError):
+                    continue
 
     # 自动创建输出目录（不存在时）+ 原子写（临时文件 + replace，防中途损坏）
     out_dir = os.path.dirname(output_path)
@@ -213,4 +275,7 @@ def build(spec: dict, output_path: str) -> dict:
     tmp_path = output_path + ".tmp"
     doc.save(tmp_path)
     os.replace(tmp_path, output_path)
-    return {"ok": True, "path": output_path}
+    result = {"ok": True, "path": output_path}
+    if warnings_list:
+        result["warnings"] = warnings_list
+    return result

@@ -162,8 +162,12 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 | `excel_to_data(path, sheet_name?)` | str, str | Excel 数据表 → JSON 行数组（batch_build 数据源） |
 | `convert_to_pdf(docx_path, output_path?)` | str, str | docx → PDF（Word/WPS/LibreOffice 降级链） |
 | `pdf_info(path)` | str | PDF 页数/大小 |
-| `build_pptx(spec_json, output_path)` | str, str | 按 PptxSpec 生成 pptx（8 版式/4 主题） |
+| `build_pptx(spec_json, output_path)` | str, str | 按 PptxSpec 生成 pptx（10 版式/4 主题） |
 | `parse_pptx(path)` | str | 解析 pptx（页/形状/表格） |
+| `docx_tables_to_excel(docx_path, output_path)` | str, str | docx 表格 → xlsx |
+| `excel_to_docx(excel_path, output_path)` | str, str | xlsx → docx 表格文档 |
+| `docx_to_markdown(docx_path, output_path?)` | str, str | docx → Markdown |
+| `merge_pdfs(pdf_paths_json, output_path)` | str, str | 合并多个 PDF |
 
 ### DocumentSpec JSON 契约（build_docx 输入）
 
