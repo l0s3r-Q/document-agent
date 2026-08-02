@@ -140,8 +140,10 @@ def build(spec: dict, output_path: str) -> dict:
         if stype == "cover":
             cover_title = s.get("title") or spec.get("title") or ""
             cover_sub = s.get("subtitle") or spec.get("subtitle") or ""
+            # 标题默认黑色；slide 级 title_color 可覆盖（如 "#1F4E79"）
+            tcolor = _hex(s.get("title_color") or theme.get("title", "000000"))
             _add_text_box(slide, lay["content_left"], 2.2, lay["cover_w"], 1.6, cover_title,
-                          theme["title_size"] + 4, True, _hex(theme["primary"]), PP_ALIGN.CENTER)
+                          theme["title_size"] + 4, True, tcolor, PP_ALIGN.CENTER)
             if cover_sub:
                 _add_text_box(slide, lay["content_left"], 3.8, lay["cover_w"], 0.8, cover_sub,
                               20, False, _hex(theme["text"]), PP_ALIGN.CENTER)
@@ -157,8 +159,9 @@ def build(spec: dict, output_path: str) -> dict:
             _add_bullets(slide, lay["content_left"], 1.8, lay["content_w"], 4.8, items, 22, _hex(theme["text"]))
 
         elif stype == "section":
+            tcolor = _hex(s.get("title_color") or theme.get("title", "000000"))
             _add_text_box(slide, lay["content_left"], 2.6, lay["cover_w"], 1.4, s.get("title", ""),
-                          theme["title_size"], True, _hex(theme["primary"]), PP_ALIGN.CENTER)
+                          theme["title_size"], True, tcolor, PP_ALIGN.CENTER)
             # 强调线
             line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 5.0, 4.2, 3.3, 0.08)
             line.fill.solid()
@@ -220,8 +223,9 @@ def build(spec: dict, output_path: str) -> dict:
                               14, False, _hex(theme["secondary"]))
 
         elif stype == "closing":
+            tcolor = _hex(s.get("title_color") or theme.get("title", "000000"))
             _add_text_box(slide, lay["content_left"], 2.6, lay["cover_w"], 1.4, s.get("title", "谢谢"),
-                          theme["title_size"] + 4, True, _hex(theme["primary"]), PP_ALIGN.CENTER)
+                          theme["title_size"] + 4, True, tcolor, PP_ALIGN.CENTER)
             if s.get("subtitle"):
                 _add_text_box(slide, lay["content_left"], 4.1, lay["cover_w"], 0.8, s["subtitle"],
                               18, False, _hex(theme["text"]), PP_ALIGN.CENTER)

@@ -284,7 +284,8 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 ```
 
 - **版式**：cover 封面 / agenda 目录 / section 章节页 / content 内容页（要点+子要点）/ two_column 双栏对比 / table 表格页（表头主色填充）/ image 图片页 / closing 结尾页
-- **主题**：corporate 商务（深蓝）、academic 学术（深红）、launch 发布会（黑底金字）、minimal 极简（灰白）
+- **主题**：corporate 商务（深蓝装饰）、academic 学术（深红装饰）、launch 发布会（黑底白字）、minimal 极简（灰白）
+- **颜色约束**：标题与正文文字**默认黑色**；主题色仅用于装饰（标题条背景/表格表头/强调线）；需要彩色标题时用 slide 级 `title_color`（如 `"#1F4E79"`）覆盖
 - 生成的是**可编辑原生形状**（文本框/表格/图片，非截图），Word/WPS/PowerPoint 均可继续编辑
 - **已有 PPT 修改**：`parse_pptx` 解析现有文件 → 提取各页结构 → 修改内容后 `build_pptx` 重建
 - **高级 PPT 需求**（复杂设计、SVG 精细排版、AI 配图、模板填充增强）→ 使用 `ppt-master` skill（第三方开源专家工作流：github.com/hugohe3/ppt-master，MIT 许可 © Hugo He；环境中未安装时可引导用户获取）
@@ -323,7 +324,7 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 1. 输出格式按场景选择：`.docx`（Word）/ `.xlsx`（Excel）/ `.pdf`（转换导出）/ `.pptx`（PPT），路径用**绝对路径**
 2. 调用 MCP 工具后**必须检查返回的 `ok` 字段**：`ok=false` 时向用户复述 `error` 并终止，不继续
 3. 生成后**必须**回读校验：docx 用 `parse_docx`（标题/字号/行距/缩进/eastAsia 字体/无乱码）；xlsx 用 `parse_excel`（行数据/合并）；pdf 用 `pdf_info`（页数/大小）；pptx 用 `parse_pptx`（页数/形状/表格）
-4. 中文字体由 build_docx 自动写入 w:eastAsia，**无需**在 spec 中额外设置
+4. 中文字体由 build_docx 自动写入 w:eastAsia，**无需**在 spec 中额外设置；PPT 文字默认黑色（build_pptx 自动处理），主题色仅用于装饰
 5. 用户未指定输出路径时，默认输出到桌面 `C:/Users/<user>/Desktop/文档/` 子目录（不存在则创建），文件名用 `类型_主题.docx`（Excel 用 `.xlsx`，PPT 用 `.pptx`）；中文路径原样传入
 6. `spec_json` 参数需**序列化为 JSON 字符串**传入 build_docx（不是对象）
 7. 注意 import_template 的截断：骨架取前 40 项、样式按 role 归类后每类取 1 条
