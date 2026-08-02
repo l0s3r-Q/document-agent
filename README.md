@@ -12,7 +12,7 @@
 | 能力 | 说明 |
 |------|------|
 | 🧠 **自然语言驱动** | 说一句话就出文档：自动识别类型 → 决策结构 → 套用规范排版 |
-| 📄 **四格式全覆盖** | `.docx` / `.xlsx` / `.pdf` / `.pptx` 统一入口，22 个工具 |
+| 📄 **四格式全覆盖** | `.docx` / `.xlsx` / `.pdf` / `.pptx` 统一入口，24 个工具 |
 | 📐 **国标级排版** | 党政公文 GB/T 9704-2012、学位论文、合同等 10 类规范预置 |
 | 🔄 **结构决策** | 从零生成 / 改结构（改造建议清单）/ 不改结构 / 模板导入 四种模式 |
 | 📊 **批量生成** | 一个模板 + N 组数据（Excel 花名册 → 批量欢迎信） |
@@ -34,6 +34,7 @@
 | 格式互转 | ✅ ↔ xlsx / → Markdown | ✅ → docx 表格 | — | — |
 | 图表 | — | 美化报表（表头/填充/筛选） | — | ✅ 原生图表（4 类型） |
 | 页眉页脚/页码 | ✅ header/footer/PAGE | — | — | — |
+| 质量门禁 | ✅ quality_check（AIGC 痕迹/占位符/排版） | ✅ 表头检查 | — | ✅ 空页/溢出 |
 | 样式美化 | 字体/字号/行距/缩进 | 表头/填充/边框/筛选 | — | 10 版式/4 主题 |
 
 ## 快速上手
@@ -71,9 +72,9 @@ pip install -r mcp/document-toolkit/requirements.txt
 帮我写一份关于开展安全生产检查的通知
 ```
 
-若工具支持 MCP 工具列表查看，应看到 22 个 `document-toolkit` 工具。
+若工具支持 MCP 工具列表查看，应看到 24 个 `document-toolkit` 工具。
 
-## 工具总表（22 个）
+## 工具总表（24 个）
 
 ### Word 工具（12 个）
 
@@ -121,6 +122,13 @@ pip install -r mcp/document-toolkit/requirements.txt
 | `docx_tables_to_excel` | docx_path, output_path | docx 全部表格 → xlsx（每表一个 sheet） |
 | `excel_to_docx` | excel_path, output_path, with_sheet_titles? | xlsx → docx 表格文档 |
 | `docx_to_markdown` | docx_path, output_path? | docx → Markdown（标题/正文/表格） |
+| `merge_pdfs` | pdf_paths_json, output_path | 合并多个 PDF（缺失自动跳过） |
+
+### 质量检查工具（1 个）
+
+| 工具 | 参数 | 功能 |
+|------|------|------|
+| `quality_check` | path | **交付质量体检**：AIGC 痕迹词/占位符残留/emoji/重复标点/句末标点/表格参差/表头空/字体缺失/标题跳级（docx）；空页/文本溢出（pptx）；表头重复/空表头（xlsx）。error 必须修复，warning 建议修复 |
 
 ## 支持的文档类型与格式
 
@@ -204,7 +212,7 @@ pip install -r mcp/document-toolkit/requirements.txt
 
 | 维度 | 措施 |
 |------|------|
-| 🧪 测试 | 46 项自动化测试（生成/解析往返、健壮性、错误路径、互转、图表、页眉页脚） |
+| 🧪 测试 | 56 项自动化测试（生成/解析往返、健壮性、错误路径、互转、图表、页眉页脚、质量门禁） |
 | 🔬 CI | GitHub Actions：Python 3.10/3.11/3.12 三版本矩阵 + LibreOffice PDF 测试 |
 | 🔒 数据安全 | 原子写入（临时文件+replace 防损坏）、异常路径脱敏（`<path>`）、模板并发锁 |
 | 🔥 热重载 | 源码 mtime 监听 + 依赖序 reload + 语法预检（改代码免重启） |
@@ -220,7 +228,7 @@ document-agent/
 │       ├── templates/             # 10 类文档排版规范（人读）
 │       └── examples/              # 典型输入示例（30+ 条）
 ├── mcp/
-│   └── document-toolkit/          # 文档读写 MCP server（22 个工具）
+│   └── document-toolkit/          # 文档读写 MCP server（24 个工具）
 │       ├── server.py              # FastMCP 入口 + 热重载机制
 │       ├── docx_toolkit/          # Word 模块（解析/生成/模板/批量/Markdown）
 │       ├── excel_toolkit/         # Excel 模块（生成/解析/数据源）
@@ -228,7 +236,7 @@ document-agent/
 │       └── pptx_toolkit/          # PPT 模块（生成/解析/图表）
 ├── docs/                          # architecture / usage / import-flow
 ├── examples/                      # 一键生成 10 类示例文档
-├── tests/                         # 46 个自动化测试
+├── tests/                         # 56 个自动化测试
 ├── LICENSE                        # MIT
 └── README.md
 ```
@@ -253,6 +261,9 @@ A: 可以。docx/xlsx/pptx 由 python-docx/openpyxl/python-pptx 直接写 OOXML�
 **Q: Excel 数据怎么用来批量生成 Word？**
 A: `excel_to_data` 把 Excel 首行作为字段名转 JSON 行数组 → 作为 `batch_build` 的 data_rows，模板中用 `{字段名}` 占位即可。
 
+**Q: 怎么保证交付质量（没有 AI 腔、没有占位符）？**
+A: 生成后调用 `quality_check` 做交付体检——检测 AIGC 痕迹词（综上所述/值得注意的是/作为AI 等）、占位符残留（{变量}/待补充）、emoji、表格参差、标题跳级等，error 级必须修复到 `pass=true`。SKILL 也内置了写作质量标准（禁 AI 腔/数据真实/交付前自检）。
+
 **Q: 输出文件会覆盖已有文件吗？**
 A: 所有生成采用原子写入（临时文件 + replace），生成过程异常不会损坏原文件；PDF 转换会先删除旧文件但仅在所有引擎均失败时才可能丢失（建议输出到新路径）。
 
@@ -267,7 +278,8 @@ A: 所有生成采用原子写入（临时文件 + replace），生成过程异�
 - [x] MCP server 热重载（改代码免重启）
 - [x] 格式互转（docx ↔ xlsx 表格、docx → Markdown）
 - [x] PPT 原生图表 + docx 页眉页脚页码
-- [x] 测试驱动加固（46 项健壮性测试 + 多 Agent 审查）
+- [x] 测试驱动加固（56 项健壮性测试 + 多 Agent 审查）
+- [x] 交付质量门禁（`quality_check` + SKILL 质量标准）
 - [ ] 在线 API 服务（规划中）
 
 ## License

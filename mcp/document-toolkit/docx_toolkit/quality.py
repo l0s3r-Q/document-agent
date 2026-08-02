@@ -36,7 +36,7 @@ EMOJI_RE = re.compile(
 )
 
 
-def _check_text(text: str, issues: list, where: str) -> None:
+def _check_text(text: str, issues: list, where: str, check_sentence_end: bool = True) -> None:
     """文本级检查：AIGC 痕迹/占位符/emoji/重复标点。"""
     if not text or not text.strip():
         return
@@ -62,11 +62,14 @@ def _check_text(text: str, issues: list, where: str) -> None:
             "level": "warning", "type": "punctuation",
             "location": where, "detail": "连续感叹/问号（情绪化表达）",
         })
-    if text[-1] not in "。；：！？；;!?…—":
-        issues.append({
-            "level": "warning", "type": "sentence_end",
-            "location": where, "detail": "段落未以句号等标点结尾",
-        })
+    # 句末标点仅检查正文段落（标题/装饰行不要求）
+    if check_sentence_end and text[-1] not in "。；：！？；;!?…—":
+        # 豁免：日期行/纯数字结尾的元信息行（如 "2026年7月31日"）
+        if not re.search(r"(20\d{2}年\d{1,2}月\d{1,2}日|\d{1,2}:\d{2}|[0-9]{2,4})$", text):
+            issues.append({
+                "level": "warning", "type": "sentence_end",
+                "location": where, "detail": "段落未以句号等标点结尾",
+            })
 
 
 def check_docx(path: str) -> dict:
@@ -77,11 +80,15 @@ def check_docx(path: str) -> dict:
     for i, item in enumerate(data.get("structure", [])):
         stype = item.get("type", "paragraph")
         text = item.get("text", "")
+        is_heading = stype in ("heading1", "heading2", "heading3")
+        is_decor = stype in ("title", "separator")
         if stype in ("paragraph", "title", "heading1", "heading2", "heading3",
                      "separator", "list", "table"):
             if text and text.strip():
                 texts_checked += 1
-                _check_text(text, issues, f"第{i + 1}段")
+                # 标题/装饰行不要求句末标点
+                _check_text(text, issues, f"第{i + 1}段",
+                            check_sentence_end=not (is_heading or is_decor))
         if stype == "table":
             rows = item.get("rows", [])
             if rows:
