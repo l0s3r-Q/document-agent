@@ -63,3 +63,28 @@ def test_pptx_4x3_and_errors(tmp_path):
     # 非法后缀
     r = build(SPEC, str(tmp_path / "bad.xls"))
     assert not r["ok"]
+
+
+def test_pptx_enhanced_layouts(tmp_path):
+    """视觉增强版式：stats 卡片 / cards 卡片化 / section 编号。"""
+    spec = {"title": "增强", "theme": "corporate", "slides": [
+        {"type": "section", "title": "一、数据", "index": "01"},
+        {"type": "stats", "title": "数据页", "stats": [
+            {"value": "287", "label": "工单", "sub": "月均 48"},
+            {"value": "17", "label": "客户"}]},
+        {"type": "content", "title": "职责", "cards": [
+            {"title": "A", "bullets": ["a1"], "color": "2E75B6"},
+            {"title": "B", "bullets": ["b1"]}]},
+    ]}
+    out = str(tmp_path / "enhanced.pptx")
+    r = build(spec, out)
+    assert r["ok"] and r["slides"] == 3
+    data = parse(out)
+    # stats 页应含大数字
+    stats_page = data["slides"][1]
+    texts = [t for sh in stats_page["shapes"] if sh.get("texts") for t in sh["texts"]]
+    assert "287" in texts and "17" in texts
+    # section 页含编号
+    sec_page = data["slides"][0]
+    sec_texts = [t for sh in sec_page["shapes"] if sh.get("texts") for t in sh["texts"]]
+    assert "01" in sec_texts

@@ -160,18 +160,93 @@ def build(spec: dict, output_path: str) -> dict:
 
         elif stype == "section":
             tcolor = _hex(s.get("title_color") or theme.get("title", "000000"))
-            _add_text_box(slide, lay["content_left"], 2.6, lay["cover_w"], 1.4, s.get("title", ""),
+            # 左侧色带装饰
+            band = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0),
+                                          Inches(0.25), Inches(7.5))
+            band.fill.solid()
+            band.fill.fore_color.rgb = _hex(theme["primary"])
+            band.line.fill.background()
+            # 编号圆点（可选 "index": "01"）
+            idx = s.get("index", "")
+            if idx:
+                dot = slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(lay["content_left"]), Inches(2.1),
+                                             Inches(1.1), Inches(1.1))
+                dot.fill.solid()
+                dot.fill.fore_color.rgb = _hex(theme["accent"])
+                dot.line.fill.background()
+                dot.shadow.inherit = False
+                _add_text_box(slide, lay["content_left"], 2.3, 1.1, 0.8, idx,
+                              30, True, _hex(theme["text"]), PP_ALIGN.CENTER)
+            _add_text_box(slide, lay["content_left"], 3.4, lay["cover_w"], 1.4, s.get("title", ""),
                           theme["title_size"], True, tcolor, PP_ALIGN.CENTER)
             # 强调线
-            line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 5.0, 4.2, 3.3, 0.08)
+            line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(4.6), 5.0, Inches(4.0), 0.08)
             line.fill.solid()
             line.fill.fore_color.rgb = _hex(theme["accent"])
             line.line.fill.background()
 
+        elif stype == "stats":
+            # 大数字数据卡片：stats: [{value, label, sub?, color?}]
+            _add_title_bar(slide, s.get("title", ""), theme, lay["bar_w"])
+            items = s.get("stats", [])
+            n = max(len(items), 1)
+            gap, margin = 0.4, lay["content_left"]
+            avail = lay["content_w"]
+            card_w = (avail - gap * (n - 1)) / n if n > 1 else avail
+            colors = ["EBF8FF", "F0FFF4", "FFF5F5", "FAF5FF"]
+            for i, it in enumerate(items):
+                x = margin + i * (card_w + gap)
+                card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                              Inches(x), Inches(1.8), Inches(card_w), Inches(3.6))
+                card.adjustments[0] = 0.06
+                card.fill.solid()
+                card.fill.fore_color.rgb = _hex(it.get("bg") or colors[i % len(colors)])
+                card.line.color.rgb = _hex(theme["secondary"])
+                card.line.width = Pt(0.75)
+                card.shadow.inherit = False
+                val = str(it.get("value", ""))
+                vcolor = _hex(it.get("color") or theme["primary"])
+                _add_text_box(slide, x, 2.3, card_w, 1.3, val,
+                              max(36, 56 - max(len(val) - 1, 0) * 4), True, vcolor, PP_ALIGN.CENTER)
+                _add_text_box(slide, x, 3.9, card_w, 0.6, it.get("label", ""),
+                              18, True, _hex(theme["text"]), PP_ALIGN.CENTER)
+                if it.get("sub"):
+                    _add_text_box(slide, x, 4.6, card_w, 0.6, it["sub"],
+                                  13, False, _hex(theme["secondary"]), PP_ALIGN.CENTER)
+
         elif stype == "content":
             _add_title_bar(slide, s.get("title", ""), theme, lay["bar_w"])
-            _add_bullets(slide, lay["content_left"], 1.6, lay["content_w"], 5.2, s.get("bullets", []),
-                         theme["body_size"], _hex(theme["text"]))
+            if s.get("cards"):
+                # 卡片化布局：cards: [{title, bullets: [], color?}]
+                cs = s["cards"]
+                n = max(len(cs), 1)
+                gap, margin = 0.4, lay["content_left"]
+                avail = lay["content_w"]
+                card_w = (avail - gap * (n - 1)) / n if n > 1 else avail
+                colors = ["2E75B6", "2F855A", "C53030", "6B46C1", "B7791F"]
+                for i, c in enumerate(cs):
+                    x = margin + i * (card_w + gap)
+                    card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                                  Inches(x), Inches(1.6), Inches(card_w), Inches(5.0))
+                    card.adjustments[0] = 0.04
+                    card.fill.solid()
+                    card.fill.fore_color.rgb = _hex("F7FAFC")
+                    card.line.color.rgb = _hex("E2E8F0")
+                    card.line.width = Pt(0.75)
+                    card.shadow.inherit = False
+                    # 顶部色条
+                    bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                                 Inches(x), Inches(1.6), Inches(card_w), Inches(0.12))
+                    bar.fill.solid()
+                    bar.fill.fore_color.rgb = _hex(c.get("color") or colors[i % len(colors)])
+                    bar.line.fill.background()
+                    _add_text_box(slide, x + 0.3, 2.0, card_w - 0.6, 0.6,
+                                  c.get("title", ""), 20, True, _hex(theme["text"]))
+                    _add_bullets(slide, x + 0.3, 2.8, card_w - 0.6, 3.6,
+                                 c.get("bullets", []), theme["body_size"] - 3, _hex(theme["text"]))
+            else:
+                _add_bullets(slide, lay["content_left"], 1.6, lay["content_w"], 5.2, s.get("bullets", []),
+                             theme["body_size"], _hex(theme["text"]))
 
         elif stype == "two_column":
             _add_title_bar(slide, s.get("title", ""), theme, lay["bar_w"])
