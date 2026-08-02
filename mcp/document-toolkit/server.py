@@ -1,6 +1,6 @@
 """document-toolkit MCP Server —— 文档解析/生成/模板导入工具箱。
 
-工具（23）：
+工具（24）：
   - parse_docx(path)            解析 docx 页面/样式/结构
   - extract_structure(path)     仅提取标题结构树（不改结构场景）
   - build_docx(spec_json, out)  按 DocumentSpec 生成 docx
@@ -24,6 +24,7 @@
   - excel_to_docx(e,o)         xlsx → docx 表格文档
   - docx_to_markdown(d,o)      docx → Markdown
   - merge_pdfs(paths, out)     合并多个 PDF
+  - quality_check(path)        交付质量体检（AIGC 痕迹/占位符/排版）
 
 启动：python server.py  （stdio 传输，FastMCP）
 """
@@ -483,6 +484,16 @@ def docx_to_markdown(docx_path: str, output_path: str = "") -> str:
     _hot_reload()
     try:
         return _ok(docx_toolkit.markdown.to_markdown(docx_path, output_path or None))
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def quality_check(path: str) -> str:
+    """交付质量体检：AIGC 痕迹词/占位符残留/emoji/表格参差/标题跳级/空页（docx/pptx/xlsx）。"""
+    _hot_reload()
+    try:
+        return _ok(docx_toolkit.quality.quality_check(path))
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 

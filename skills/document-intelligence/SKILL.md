@@ -168,6 +168,7 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 | `excel_to_docx(excel_path, output_path)` | str, str | xlsx → docx 表格文档 |
 | `docx_to_markdown(docx_path, output_path?)` | str, str | docx → Markdown |
 | `merge_pdfs(pdf_paths_json, output_path)` | str, str | 合并多个 PDF |
+| `quality_check(path)` | str | 交付质量体检（AIGC 痕迹/占位符/排版/结构） |
 
 ### DocumentSpec JSON 契约（build_docx 输入）
 
@@ -328,11 +329,21 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 | `export_template` | 把用户模板导出为 JSON 分享/备份 |
 | `compare_templates` | 比较两模板差异（选模板、排查排版漂移时用） |
 
+## 五·九、交付质量标准（拿得出手的门禁）
+
+**目标：交付物不用修改、没有 AIGC 痕迹、没有细节错误。** 生成内容时严格遵守：
+
+1. **禁 AIGC 痕迹词**：不得使用「总而言之/综上所述/总的来说/值得注意的是/需要注意的是/毋庸置疑/众所周知/作为AI/首先…其次…最后」等 AI 腔套话；结尾不用空洞总结
+2. **禁占位残留**：不得输出 `{变量}`、待补充、TODO、XXX 等占位符；所有内容必须实写
+3. **禁细节错误**：正文段落以句号等标点结尾；不用连续感叹/问号；正式文档不用 emoji；表格列数一致、表头不空；标题层级不跳级
+4. **数据真实**：数字/日期/人名不得虚构或编造，材料中没有的信息明确说明
+5. **交付前自检**：生成后调用 `quality_check`，error 全部清零；warning 逐条评估，能改则改
+
 ## 六、执行约束
 
 1. 输出格式按场景选择：`.docx`（Word）/ `.xlsx`（Excel）/ `.pdf`（转换导出）/ `.pptx`（PPT），路径用**绝对路径**
 2. 调用 MCP 工具后**必须检查返回的 `ok` 字段**：`ok=false` 时向用户复述 `error` 并终止，不继续
-3. 生成后**必须**回读校验：docx 用 `parse_docx`（标题/字号/行距/缩进/eastAsia 字体/无乱码）；xlsx 用 `parse_excel`（行数据/合并）；pdf 用 `pdf_info`（页数/大小）；pptx 用 `parse_pptx`（页数/形状/表格）
+3. 生成后**必须**回读校验：docx 用 `parse_docx`（标题/字号/行距/缩进/eastAsia 字体/无乱码）；xlsx 用 `parse_excel`（行数据/合并）；pdf 用 `pdf_info`（页数/大小）；pptx 用 `parse_pptx`（页数/形状/表格）；**并调用 `quality_check` 做交付质量体检**：存在 error 级问题必须修复后重新生成，直到 `pass=true`（warning 级向用户说明后可交付）
 4. 中文字体由 build_docx 自动写入 w:eastAsia，**无需**在 spec 中额外设置；PPT 文字默认黑色（build_pptx 自动处理），主题色仅用于装饰
 5. 用户未指定输出路径时，默认输出到桌面 `C:/Users/<user>/Desktop/文档/` 子目录（不存在则创建），文件名用 `类型_主题.docx`（Excel 用 `.xlsx`，PPT 用 `.pptx`）；中文路径原样传入
 6. `spec_json` 参数需**序列化为 JSON 字符串**传入 build_docx（不是对象）
