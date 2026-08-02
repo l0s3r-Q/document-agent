@@ -11,13 +11,20 @@ _ALIGN_MAP = {
     WD_ALIGN_PARAGRAPH.LEFT: "LEFT",
     WD_ALIGN_PARAGRAPH.RIGHT: "RIGHT",
     WD_ALIGN_PARAGRAPH.JUSTIFY: "JUSTIFY",
+    WD_ALIGN_PARAGRAPH.DISTRIBUTE: "DISTRIBUTE",
+    WD_ALIGN_PARAGRAPH.JUSTIFY_MED: "JUSTIFY_MED",
+    WD_ALIGN_PARAGRAPH.JUSTIFY_HI: "JUSTIFY_HI",
+    WD_ALIGN_PARAGRAPH.JUSTIFY_LOW: "JUSTIFY_LOW",
+    WD_ALIGN_PARAGRAPH.THAI_JUSTIFY: "THAI_JUSTIFY",
 }
 
 def _line_rule_name(rule):
-    """取行距规则枚举名（EXACTLY/AT_LEAST/MULTIPLE），兼容 None 与旧版。"""
+    """取行距规则枚举名：SINGLE/ONE_POINT_FIVE/DOUBLE 归一为 MULTIPLE。"""
     if rule is None:
         return "MULTIPLE"
     name = getattr(rule, "name", None)
+    if name in ("SINGLE", "ONE_POINT_FIVE", "DOUBLE"):
+        return "MULTIPLE"  # 其 line_spacing 已为倍数 float
     return name if name in ("EXACTLY", "AT_LEAST", "MULTIPLE") else str(rule)
 
 
@@ -63,7 +70,7 @@ def _paragraph_info(p) -> dict:
     ind = p._p.pPr.ind if p._p.pPr is not None and p._p.pPr.ind is not None else None
     if ind is not None:
         chars = ind.get(qn("w:firstLineChars"))
-        if chars:
+        if chars and str(chars).lstrip("-").isdigit():
             # firstLineChars 单位是 1/100 字符，转磅需结合字号
             info["first_line_indent_chars"] = int(chars) / 100.0
     if pf.first_line_indent is not None:
@@ -89,13 +96,13 @@ def _detect_type(p) -> str:
             return f"heading{lvl + 1}"
         if lvl >= 3:
             return "heading3"
+    import re as _re
     name = (p.style.name if p.style else "") or ""
-    if name.startswith("Heading 1") or name == "标题 1":
-        return "heading1"
-    if name.startswith("Heading 2") or name == "标题 2":
-        return "heading2"
-    if name.startswith("Heading 3") or name == "标题 3":
-        return "heading3"
+    m = _re.fullmatch(r"Heading ([1-3])(?:.*)?", name)
+    if m:
+        return f"heading{m.group(1)}"
+    if name in ("标题 1", "标题 2", "标题 3"):
+        return f"heading{name[-1]}"
     if name.startswith("Heading"):
         return "heading1"
     return "paragraph"
@@ -127,6 +134,14 @@ def parse(path: str) -> dict:
                 continue
             info = _paragraph_info(p)
             ptype = _detect_type(p)
+            # 往返保真：识别 title/separator/page_break 特殊类型
+            xml = child.xml if hasattr(child, "xml") else ""
+            if 'w:type="page"' in xml or "w:type='page'" in xml:
+                ptype = "page_break"
+            elif ptype == "paragraph" and info.get("text", "").startswith("—" * 5) and len(info.get("text", "")) <= 40:
+                ptype = "separator"
+            elif ptype == "paragraph" and not structure and info.get("text") and (info.get("size_pt") or 0) >= 16 and info.get("align") == "CENTER":
+                ptype = "title"
             entry = {"type": ptype, "text": info.pop("text")}
             entry.update({k: v for k, v in info.items() if v is not None})
             structure.append(entry)

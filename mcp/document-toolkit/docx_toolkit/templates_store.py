@@ -4,7 +4,19 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import time
+
+# 模板写操作全局锁（并发安全）
+_TEMPLATE_LOCK = threading.Lock()
+
+
+def _atomic_write_json(path: str, obj: dict) -> None:
+    """临时文件 + os.replace 原子落盘。"""
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
 
 # 内置模板目录（包内 templates/）
 BUILTIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
@@ -56,18 +68,20 @@ def list_templates() -> list[dict]:
             try:
                 with open(os.path.join(USER_DIR, fn), encoding="utf-8") as f:
                     t = json.load(f)
+                if not isinstance(t, dict):
+                    continue
                 result.append({**_template_summary(t), "file": fn})
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError, AttributeError):
                 continue
     return result
 
 
 def save_user_template(template: dict, template_name: str) -> str:
-    """保存用户导入的模板，返回文件路径。"""
+    """保存用户导入的模板（重复导入覆盖更新），返回文件路径。"""
     _ensure_user_dir()
     path = os.path.join(USER_DIR, f"{_safe_template_name(template_name)}.json")
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(template, f, ensure_ascii=False, indent=2)
+    with _TEMPLATE_LOCK:
+        _atomic_write_json(path, template)
     return path
 
 
@@ -101,21 +115,26 @@ def _user_path(name: str) -> str | None:
 
 
 def rename_user_template(old_name: str, new_name: str) -> str | None:
-    """重命名用户模板，返回新路径；模板不存在返回 None。"""
+    """重命名用户模板，返回新路径；模板不存在返回 None；目标已存在返回 "EXISTS"。"""
     src_path = _user_path(old_name)
     if src_path is None:
         return None
     dst_path = os.path.join(USER_DIR, f"{_safe_template_name(new_name)}.json")
-    if src_path == dst_path:
-        return dst_path
-    if os.path.exists(dst_path):
-        return "EXISTS"  # 目标已存在，拒绝覆盖
-    with open(src_path, encoding="utf-8") as f:
-        tpl = json.load(f)
-    tpl["meta"]["name"] = new_name
-    with open(dst_path, "w", encoding="utf-8") as f:
-        json.dump(tpl, f, ensure_ascii=False, indent=2)
-    os.remove(src_path)
+    with _TEMPLATE_LOCK:
+        if src_path == dst_path:
+            # 名称消毒后相同：仅更新 meta.name
+            with open(src_path, encoding="utf-8") as f:
+                tpl = json.load(f)
+            tpl["meta"]["name"] = new_name
+            _atomic_write_json(src_path, tpl)
+            return dst_path
+        if os.path.exists(dst_path):
+            return "EXISTS"  # 目标已存在，拒绝覆盖
+        with open(src_path, encoding="utf-8") as f:
+            tpl = json.load(f)
+        tpl["meta"]["name"] = new_name
+        _atomic_write_json(dst_path, tpl)
+        os.remove(src_path)
     return dst_path
 
 
@@ -124,7 +143,8 @@ def delete_user_template(name: str) -> bool:
     path = _user_path(name)
     if path is None:
         return False
-    os.remove(path)
+    with _TEMPLATE_LOCK:
+        os.remove(path)
     return True
 
 
@@ -155,8 +175,12 @@ def load_template_by_name(name: str) -> dict | None:
     """按名称加载模板（用户模板优先，其次内置），供对比/复用。"""
     path = _user_path(name)
     if path is not None:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(path, encoding="utf-8") as f:
+                t = json.load(f)
+            return t if isinstance(t, dict) else None
+        except (json.JSONDecodeError, OSError):
+            return None
     for dt in sorted(_DOC_TYPES):
         t = get_builtin(dt)
         if t and t.get("meta", {}).get("name") == name:

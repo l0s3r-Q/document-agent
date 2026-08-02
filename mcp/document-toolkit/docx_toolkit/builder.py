@@ -40,17 +40,17 @@ def _apply_paragraph_format(pf, style: dict):
         pf.alignment = _ALIGN[align]
 
     rule = style.get("line_spacing_rule")
-    if rule == "EXACTLY" and style.get("line_spacing_pt"):
+    if rule == "EXACTLY" and style.get("line_spacing_pt") is not None:
         pf.line_spacing_rule = WD_LINE_SPACING.EXACTLY
         pf.line_spacing = Pt(float(style["line_spacing_pt"]))
-    elif rule == "AT_LEAST" and style.get("line_spacing_pt"):
+    elif rule == "AT_LEAST" and style.get("line_spacing_pt") is not None:
         pf.line_spacing_rule = WD_LINE_SPACING.AT_LEAST
         pf.line_spacing = Pt(float(style["line_spacing_pt"]))
-    elif style.get("line_spacing_multiple"):
+    elif style.get("line_spacing_multiple") is not None:
         pf.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
         pf.line_spacing = float(style["line_spacing_multiple"])
 
-    if style.get("first_line_indent_pt"):
+    if style.get("first_line_indent_pt") is not None:
         pf.first_line_indent = Pt(float(style["first_line_indent_pt"]))
     elif style.get("first_line_indent_chars") and style.get("size_pt"):
         # 缩进 N 字符 ≈ N × 字号
@@ -76,6 +76,8 @@ def build(spec: dict, output_path: str) -> dict:
        styles?{role: {font_name,size_pt,bold,align,line_spacing_rule,...}} 按 role 覆盖预置排版,
        sections:[{type,text,font?,align?,bold?,indent_first_line?,rows?,items?}]}
     """
+    if not output_path.lower().endswith(".docx"):
+        return {"ok": False, "error": "输出路径必须以 .docx 结尾"}
     doc = Document()
     doc_type = spec.get("doc_type", "general")
 
@@ -92,7 +94,12 @@ def build(spec: dict, output_path: str) -> dict:
     def add_paragraph(sec_spec: dict, role: str):
         override = {}
         if sec_spec.get("font"):
-            override.update(sec_spec["font"])
+            f = sec_spec["font"]
+            if "name" in f and "font_name" not in f:
+                f = dict(f, font_name=f["name"])
+            if "east_asia" in f and "font_name" not in f:
+                f = dict(f, font_name=f["east_asia"])
+            override.update(f)
         if sec_spec.get("align"):
             override["align"] = sec_spec["align"]
         if sec_spec.get("bold") is not None:
@@ -132,7 +139,10 @@ def build(spec: dict, output_path: str) -> dict:
     # ── 正文各节 ──────────────────────────────────────────────
     for item in spec.get("sections", []):
         stype = item.get("type", "paragraph")
-        if stype in ("heading1", "heading2", "heading3"):
+        if stype == "title":
+            # 文档标题（居中大字段）
+            add_paragraph({**item, "align": "CENTER"}, "title")
+        elif stype in ("heading1", "heading2", "heading3"):
             add_paragraph(item, stype)
         elif stype == "paragraph":
             add_paragraph(item, "body")
@@ -169,9 +179,11 @@ def build(spec: dict, output_path: str) -> dict:
                     run = p.add_run(row[ci] if ci < len(row) else "")
                     _set_run_font(run, style.get("font_name"), style.get("size_pt"), style.get("bold"))
 
-    # 自动创建输出目录（不存在时）
+    # 自动创建输出目录（不存在时）+ 原子写（临时文件 + replace，防中途损坏）
     out_dir = os.path.dirname(output_path)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    doc.save(output_path)
+    tmp_path = output_path + ".tmp"
+    doc.save(tmp_path)
+    os.replace(tmp_path, output_path)
     return {"ok": True, "path": output_path}

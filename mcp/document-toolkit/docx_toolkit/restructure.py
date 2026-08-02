@@ -49,28 +49,42 @@ def suggest_restructure(source_path: str, target_doc_type: str) -> dict:
     # 匹配：目标骨架条目是否能在源中找到语义相近项
     items = []
     keep, add, remove = 0, 0, 0
-    matched_ids = set()
 
     # 源标题与正文分开：短目标词（<4 字）只与源标题匹配，避免误伤正文
     src_titles = [s for s in source_items if s["level"] > 0]
     src_bodies = [s for s in source_items if s["level"] == 0]
 
-    def find_hit(ttext: str) -> dict | None:
-        nt = norm(ttext)
+    # norm 预计算缓存（性能）
+    _norm_cache = {}
+
+    def cached_norm(t: str) -> str:
+        if t not in _norm_cache:
+            _norm_cache[t] = norm(t)
+        return _norm_cache[t]
+
+    # 源项池（已消费的移除，避免同一源项被多个目标条目命中）
+    title_pool = list(src_titles)
+    full_pool = list(source_items)
+
+    def find_hit(ttext: str):
+        nt = cached_norm(ttext)
         if not nt:
             return None
         short = len(nt) < 4
-        pool = src_titles if short else source_items
+        pool = title_pool if short else full_pool
         for si in pool:
-            st = si["text"]
-            if not st:
-                continue
-            ns = norm(st)
+            ns = cached_norm(si["text"])
             if not ns:
                 continue
             if nt == ns or (len(nt) >= 4 and (nt in ns or ns in nt)):
                 return si
         return None
+
+    def consume(si) -> None:
+        """从匹配池移除已消费源项。"""
+        for pool in (title_pool, full_pool):
+            if si in pool:
+                pool.remove(si)
 
     for ti in target_items:
         ttext = ti["text"]
@@ -78,7 +92,7 @@ def suggest_restructure(source_path: str, target_doc_type: str) -> dict:
         if hit:
             items.append({"action": "keep", "level": ti["level"], "text": ttext,
                           "reason": f"源文档已有对应内容（{hit['text'][:30]}）"})
-            matched_ids.add(id(hit))
+            consume(hit)
             keep += 1
         else:
             items.append({"action": "add", "level": ti["level"], "text": ttext,
@@ -86,11 +100,12 @@ def suggest_restructure(source_path: str, target_doc_type: str) -> dict:
             add += 1
 
     # 源中有但目标骨架未覆盖的章节 → 提示移除或合并（level 不要求严格相等）
+    target_norms = {cached_norm(ti["text"]) for ti in target_items if ti["text"]}
     for si in src_titles:
-        if id(si) in matched_ids:
+        ns = cached_norm(si["text"])
+        if not ns:
             continue
-        if any(norm(ti["text"]) and (norm(ti["text"]) in norm(si["text"]) or norm(si["text"]) in norm(ti["text"]))
-               for ti in target_items):
+        if any(tn and (tn in ns or ns in tn) for tn in target_norms):
             continue
         items.append({"action": "remove", "level": si["level"], "text": si["text"],
                       "reason": "目标模板未包含此章节，建议删除或并入相关章节"})

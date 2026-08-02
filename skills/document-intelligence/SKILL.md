@@ -203,7 +203,7 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 
 | parse_docx 输出字段 | DocumentSpec section 字段 |
 |--------------------|--------------------------|
-| font_name / east_asia | font.name（中文用 east_asia） |
+| font_name（或 east_asia） | font.font_name（中文名直接填，实现自动写 eastAsia） |
 | size_pt | font.size_pt |
 | bold | bold |
 | align | align |

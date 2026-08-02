@@ -39,7 +39,7 @@ _WIN_RESERVED = {"CON", "PRN", "AUX", "NUL"} | {f"COM{n}" for n in range(1, 10)}
 
 def _safe_filename(output_dir: str, fname: str, index: int) -> str:
     """文件名消毒：去非法字符/尾随空格点/保留名/超长，并处理重名。"""
-    stem = "".join(c for c in fname if c not in '\/:*?"<>|').strip().rstrip(".")
+    stem = "".join(c for c in fname if c.isprintable() and c not in '\/:*?"<>|').strip().rstrip(".")
     if stem.lower().endswith(".docx"):
         stem = stem[:-5]  # 去扩展名，统一在末尾拼接
     if not stem:
@@ -69,12 +69,14 @@ def batch_build(spec_template: dict, data_rows: list[dict], output_dir: str,
         return {"ok": False, "error": "spec_template 必须是对象"}
     if not output_dir:
         return {"ok": False, "error": "output_dir 不能为空"}
+    # 预校验所有行（避免中途失败残留半成品）
+    for i, row in enumerate(data_rows, 1):
+        if not isinstance(row, dict):
+            return {"ok": False, "error": f"第 {i} 行数据不是对象"}
     os.makedirs(output_dir, exist_ok=True)
 
     results, warnings = [], []
     for i, row in enumerate(data_rows, 1):
-        if not isinstance(row, dict):
-            return {"ok": False, "error": f"第 {i} 行数据不是对象"}
         spec = _render_tree(copy.deepcopy(spec_template), row, warnings)
         if filename_field and filename_field in row:
             fname = f"{str(row[filename_field])}.docx"

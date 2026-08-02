@@ -11,17 +11,29 @@ def parse(path: str, sheet_name: str | None = None) -> dict:
     sheet_name 为空时解析全部 sheet；返回 rows/merged/col_widths。
     """
     wb = load_workbook(path, data_only=False)
+    # 公式缓存值需 data_only=True 的二次加载（数据源场景依赖缓存值）
+    try:
+        wb_cached = load_workbook(path, data_only=True)
+    except Exception:  # noqa: BLE001
+        wb_cached = None
     result = {"file": path, "sheets": []}
 
     for ws in wb.worksheets:
         if sheet_name and ws.title != sheet_name:
             continue
+        cached_ws = wb_cached[ws.title] if wb_cached is not None and ws.title in wb_cached.sheetnames else None
         rows = []
-        for row in ws.iter_rows():
+        for ri, row in enumerate(ws.iter_rows()):
             vals = []
-            for cell in row:
-                if cell.data_type == "f":  # 公式：标注类型与缓存值
-                    vals.append({"formula": cell.value, "cached": cell.value if False else None})
+            for ci, cell in enumerate(row):
+                if cell.data_type == "f":  # 公式：标注公式与缓存值
+                    cached = None
+                    if cached_ws is not None:
+                        try:
+                            cached = cached_ws.cell(row=ri + 1, column=ci + 1).value
+                        except Exception:  # noqa: BLE001
+                            cached = None
+                    vals.append({"formula": cell.value, "cached": cached})
                 else:
                     vals.append("" if cell.value is None else cell.value)
             rows.append(vals)
@@ -71,8 +83,11 @@ def to_data(path: str, sheet_name: str | None = None) -> dict:
             if not h:
                 continue
             v = r[i] if i < len(r) else ""
-            if isinstance(v, dict):  # 公式单元格
-                v = v.get("cached", "") or ""
+            if isinstance(v, dict):  # 公式单元格：用缓存值（无缓存则公式串）
+                v = v.get("cached")
+                if v is None:
+                    v = v if False else v.get("formula", "")
+                    v = "" if v is None else v
             item[h] = "" if v is None else v
         out_rows.append(item)
     return {"ok": True, "rows": out_rows, "sheet": ws["name"], "skipped_rows": skipped}

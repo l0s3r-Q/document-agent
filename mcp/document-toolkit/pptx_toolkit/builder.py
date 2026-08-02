@@ -116,14 +116,16 @@ def build(spec: dict, output_path: str) -> dict:
         return {"ok": False, "error": "输出路径必须以 .pptx 结尾"}
 
     theme_name = spec.get("theme") or DEFAULT_THEME
-    theme = THEMES.get(theme_name, THEMES[DEFAULT_THEME])
+    if theme_name not in THEMES:
+        theme_name = DEFAULT_THEME  # 非法主题回退并归一化返回值
+    theme = THEMES[theme_name]
     size = _SLIDE_SIZE.get(spec.get("size") or "16:9", _SLIDE_SIZE["16:9"])
 
     prs = Presentation()
     prs.slide_width, prs.slide_height = size
     slides = spec.get("slides") or []
-    if not slides:
-        return {"ok": False, "error": "slides 不能为空"}
+    if not isinstance(slides, list) or not slides:
+        return {"ok": False, "error": "slides 必须是非空数组"}
     lay = _LAYOUT.get(spec.get("size") or "16:9", _LAYOUT["16:9"])
     warnings = []
 
@@ -264,7 +266,7 @@ def build(spec: dict, output_path: str) -> dict:
             _add_title_bar(slide, s.get("title", ""), theme, lay["bar_w"])
             rows = s.get("rows") or []
             if rows:
-                ncols = max(len(r) for r in rows)
+                ncols = max(len(r) for r in rows) or 1
                 shape = slide.shapes.add_table(len(rows), ncols, Inches(lay["content_left"]), Inches(1.8),
                                                Inches(lay["content_w"]), Inches(4.2))
                 tbl = shape.table

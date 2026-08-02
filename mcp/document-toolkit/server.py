@@ -68,40 +68,50 @@ _HOT_RELOAD_ORDER = [
 _SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 _hot_last_check = 0.0
 _hot_mtimes = {}
+_hot_lock = threading.Lock()
 
 
 def _hot_reload():
-    """工具调用前检查：源码文件有变化则 reload 相关模块（无需重启进程）。"""
+    """工具调用前检查：源码文件有变化则 reload 相关模块（无需重启进程）。
+
+    并发安全：全程加锁；reload 前 compile 预检语法，失败则跳过并记录。
+    """
     global _hot_last_check
     now = time.time()
     if now - _hot_last_check < 1.0:
         return
-    _hot_last_check = now
-    changed = False
-    for root, _dirs, files in os.walk(_SRC_DIR):
-        if "__pycache__" in root or "user_templates" in root:
-            continue
-        for f in files:
-            if not f.endswith(".py"):
+    with _hot_lock:
+        now2 = time.time()
+        if now2 - _hot_last_check < 1.0:
+            return
+        _hot_last_check = now2
+        changed = False
+        for root, _dirs, files in os.walk(_SRC_DIR):
+            if "__pycache__" in root or "user_templates" in root:
                 continue
-            p = os.path.join(root, f)
-            try:
-                mt = os.path.getmtime(p)
-            except OSError:
-                continue
-            if p not in _hot_mtimes:
-                _hot_mtimes[p] = mt
-            elif mt != _hot_mtimes[p]:
-                _hot_mtimes[p] = mt
-                changed = True
-    if changed:
-        for name in _HOT_RELOAD_ORDER:
-            mod = sys.modules.get(name)
-            if mod is not None:
+            for f in files:
+                if not f.endswith(".py"):
+                    continue
+                p = os.path.join(root, f)
                 try:
+                    mt = os.path.getmtime(p)
+                except OSError:
+                    continue
+                if p not in _hot_mtimes:
+                    _hot_mtimes[p] = mt
+                elif mt != _hot_mtimes[p]:
+                    _hot_mtimes[p] = mt
+                    changed = True
+        if changed:
+            for name in _HOT_RELOAD_ORDER:
+                mod = sys.modules.get(name)
+                if mod is None:
+                    continue
+                try:
+                    compile(open(mod.__file__, encoding="utf-8").read(), mod.__file__, "exec")
                     importlib.reload(mod)
                 except Exception as e:  # noqa: BLE001
-                    print(f"[hot-reload] {name} reload 失败: {e}", file=sys.stderr)
+                    print(f"[hot-reload] {name} reload 失败（保留旧模块）: {e}", file=sys.stderr)
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -136,8 +146,12 @@ def _err(message: str) -> str:
 
 
 def _err_sanitized(e: Exception) -> str:
-    """错误脱敏：仅返回异常类型与简短信息，避免泄露本地绝对路径。"""
-    return _err(f"{type(e).__name__}: {str(e)[:200]}")
+    """错误脱敏：异常类型 + 去除本地绝对路径的简短信息。"""
+    import re as _re
+    msg = str(e)[:300]
+    msg = _re.sub(r'[A-Za-z]:[\\/][^ \t\r\n]+', '<path>', msg)
+    msg = _re.sub(r'[\\/](?:home|Users|users)[\\/][^ \t\r\n]+', '<path>', msg)
+    return _err(f"{type(e).__name__}: {msg}")
 
 
 @mcp.tool()
@@ -204,7 +218,8 @@ def import_template(docx_path: str, template_name: str) -> str:
                 role = "body"
             role_styles.setdefault(role, s)
         template = {
-            "meta": docx_toolkit.templates_store.make_template_meta(template_name, "user", "user", f"从 {docx_path} 导入"),
+            "meta": docx_toolkit.templates_store.make_template_meta(template_name, "user", "user",
+                                              f"从 {os.path.basename(docx_path)} 导入"),
             "page": data["page"],
             "styles": role_styles,
             "skeleton": skeleton,
@@ -221,14 +236,18 @@ def get_template(doc_type: str) -> str:
     _hot_reload()
     t = docx_toolkit.templates_store.get_builtin(doc_type)
     if t is None:
-        return _err(f"未知类型 {doc_type}，可用: {', '.join(sorted(docx_toolkit.templates_store._DOC_TYPES))}")
+        return _err(f"未知类型 {doc_type}，可用: general, thesis, official, contract, bidding, legal, government_report, techdoc, resume, notice")
     return _ok({"template": t})
 
 
 @mcp.tool()
 def list_templates() -> str:
     """列出全部可用模板（内置 10 类 + 用户导入），含排版摘要。"""
-    return _ok({"templates": docx_toolkit.templates_store.list_templates()})
+    _hot_reload()
+    try:
+        return _ok({"templates": docx_toolkit.templates_store.list_templates()})
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
 
 
 @mcp.tool()
@@ -301,7 +320,11 @@ def export_template(name: str, output_path: str) -> str:
 @mcp.tool()
 def compare_templates(name_a: str, name_b: str) -> str:
     """对比两个模板的页面/样式/骨架差异。"""
-    return _ok(docx_toolkit.templates_store.compare_templates(name_a, name_b))
+    _hot_reload()
+    try:
+        return _ok(docx_toolkit.templates_store.compare_templates(name_a, name_b))
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
 
 
 
