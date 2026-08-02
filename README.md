@@ -1,38 +1,26 @@
 # document-agent
 
-> 一个**与工具无关**的文档智能写作代理：理解自然语言需求，自动识别文档类型，按规范排版生成 **Word / Excel / PDF / PPT** 成品文档。
+> 一个**与工具无关**的文档智能写作代理：理解自然语言需求，自动识别文档类型，按规范排版生成 **Word / Excel / PDF / PPT** 成品文档，支持批量生成、模板管理、格式互转与 Markdown 导出。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/l0s3r-Q/document-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/l0s3r-Q/document-agent/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/tests-46%20passed-brightgreen.svg)](tests/)
 
 ## ✨ 特色亮点
 
 | 能力 | 说明 |
 |------|------|
-| 🧠 **自然语言驱动** | 说一句话就出文档，自动识别类型、决策结构、套用规范排版 |
-| 📄 **四格式全覆盖** | `.docx` / `.xlsx` / `.pdf` / `.pptx` 统一入口 |
-| 📐 **国标级排版** | 党政公文 GB/T 9704-2012（3 号仿宋、28 磅固定行距）、学位论文、合同等 10 类规范 |
-| 🔄 **结构决策** | 从零生成 / 改结构（改造建议清单）/ 不改结构（内容替换）/ 模板导入 四种模式 |
+| 🧠 **自然语言驱动** | 说一句话就出文档：自动识别类型 → 决策结构 → 套用规范排版 |
+| 📄 **四格式全覆盖** | `.docx` / `.xlsx` / `.pdf` / `.pptx` 统一入口，22 个工具 |
+| 📐 **国标级排版** | 党政公文 GB/T 9704-2012、学位论文、合同等 10 类规范预置 |
+| 🔄 **结构决策** | 从零生成 / 改结构（改造建议清单）/ 不改结构 / 模板导入 四种模式 |
 | 📊 **批量生成** | 一个模板 + N 组数据（Excel 花名册 → 批量欢迎信） |
+| 🔁 **格式互转** | docx ↔ xlsx 表格互转、docx → Markdown、docx → PDF |
+| 📈 **数据可视化** | PPT 原生图表（柱/条/线/饼）、Excel 美化报表、大数字卡片 |
 | 🛠 **模板管理** | 导入范文、重命名、删除、导出、双模板对比 |
-| 🔥 **热重载** | 修改 MCP server 源码后无需重启，下次调用自动生效 |
+| 🔥 **热重载** | 修改 MCP server 源码无需重启，下次调用自动生效 |
 | 🔌 **与工具无关** | Skill 遵循 Agent Skills 规范，MCP 遵循标准协议，任何 AI 工具可接入 |
-
-## 它能做什么
-
-你只需要说一句话：
-
-- 📄 "帮我写一份关于开展消防安全检查的通知"
-- 📄 "写一份毕业论文，题目是《基于深度学习的入侵检测研究》"
-- 📄 "把这份技术方案改成招标文件"
-- 📊 "把这几个人的信息做成一个花名册 Excel"
-- 📊 "用这份花名册（D:/data/花名册.xlsx）批量生成入职欢迎信"
-- 📑 "把这份通知转成 PDF"
-- 🎞 "做一份产品介绍的 PPT"
-- 📄 "导入我的公文模板，以后都按这个格式写"
-- 📄 "润色一下这份总结（D:/docs/总结.docx）"
-
-系统会自动：**判定文档类型** → **决策结构策略** → **按规范排版** → **输出成品**。
 
 ## 能力矩阵
 
@@ -43,33 +31,12 @@
 | 批量生成 | ✅ batch_build | ✅ 数据源 excel_to_data | — | — |
 | 模板导入/复用 | ✅ import_template | — | — | — |
 | 结构改造建议 | ✅ suggest_restructure | — | — | — |
-| 样式美化 | 字体/字号/行距/缩进 | 表头/填充/边框/筛选 | — | 8 版式/4 主题 |
+| 格式互转 | ✅ ↔ xlsx / → Markdown | ✅ → docx 表格 | — | — |
+| 图表 | — | 美化报表（表头/填充/筛选） | — | ✅ 原生图表（4 类型） |
+| 页眉页脚/页码 | ✅ header/footer/PAGE | — | — | — |
+| 样式美化 | 字体/字号/行距/缩进 | 表头/填充/边框/筛选 | — | 10 版式/4 主题 |
 
-## 架构
-
-```
-┌─────────────────────────────┐
-│ document-intelligence skill │  大脑：意图识别（10 类 + 3 格式）
-│ (SKILL.md + 10 类规范库)     │  + 结构决策 + 写作计划编排
-└──────────────┬──────────────┘
-               │ DocumentSpec / ExcelSpec / PptxSpec JSON
-┌──────────────▼──────────────┐
-│  document-toolkit MCP server │  手脚：19 个工具
-│  ├── docx_toolkit/           │  Word 解析/生成/模板（python-docx）
-│  ├── excel_toolkit/          │  Excel 生成/解析/数据源（openpyxl）
-│  ├── pdf_toolkit/            │  PDF 三引擎降级转换（Word→WPS→LibreOffice）
-│  └── pptx_toolkit/           │  PPT 生成/解析（python-pptx）
-└──────────────┬──────────────┘
-               │
-               ▼
-     .docx / .xlsx / .pdf / .pptx
-```
-
-- **Skill**（`skills/`）：遵循 [Anthropic Agent Skills](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills) 规范，任何支持 SKILL.md 的 Agent 均可加载
-- **MCP**（`mcp/`）：标准 MCP 协议（stdio），Claude Code、Cursor、Cline、VS Code Copilot、Reasonix 等均可接入
-- **高级 PPT**：可配合第三方专家 skill [ppt-master](https://github.com/hugohe3/ppt-master)（MIT）使用
-
-## 快速开始
+## 快速上手
 
 > 需要 **Python 3.10+**
 
@@ -104,9 +71,9 @@ pip install -r mcp/document-toolkit/requirements.txt
 帮我写一份关于开展安全生产检查的通知
 ```
 
-若工具支持 MCP 工具列表查看，应看到 19 个 `document-toolkit` 工具。
+若工具支持 MCP 工具列表查看，应看到 22 个 `document-toolkit` 工具。
 
-## 工具总表（19 个）
+## 工具总表（22 个）
 
 ### Word 工具（12 个）
 
@@ -130,7 +97,7 @@ pip install -r mcp/document-toolkit/requirements.txt
 | 工具 | 参数 | 功能 |
 |------|------|------|
 | `build_excel` | spec_json, output_path | 生成 xlsx（默认表头美化：加粗+浅蓝填充+边框+自适应列宽+冻结+筛选） |
-| `parse_excel` | path, sheet_name? | 解析 xlsx：行数据/合并/列宽 |
+| `parse_excel` | path, sheet_name? | 解析 xlsx：行数据/合并/列宽（公式缓存值） |
 | `excel_to_data` | path, sheet_name? | Excel 数据表 → JSON 行数组（batch_build 数据源） |
 
 ### PDF 工具（2 个）
@@ -144,8 +111,16 @@ pip install -r mcp/document-toolkit/requirements.txt
 
 | 工具 | 参数 | 功能 |
 |------|------|------|
-| `build_pptx` | spec_json, output_path | 生成 pptx（8 版式/4 主题，可编辑原生形状） |
+| `build_pptx` | spec_json, output_path | 生成 pptx（10 版式/4 主题，可编辑原生形状） |
 | `parse_pptx` | path | 解析 pptx：页/形状/表格 |
+
+### 互转工具（3 个）
+
+| 工具 | 参数 | 功能 |
+|------|------|------|
+| `docx_tables_to_excel` | docx_path, output_path | docx 全部表格 → xlsx（每表一个 sheet） |
+| `excel_to_docx` | excel_path, output_path, with_sheet_titles? | xlsx → docx 表格文档 |
+| `docx_to_markdown` | docx_path, output_path? | docx → Markdown（标题/正文/表格） |
 
 ## 支持的文档类型与格式
 
@@ -164,13 +139,22 @@ pip install -r mcp/document-toolkit/requirements.txt
 | 简历 | resume | 求职简历（24pt 姓名、紧凑行距） |
 | 通知公告 | notice | 非公文类公告通知（黑体 18pt 标题） |
 
-### 3 类附加格式
+### PPT 十版式
 
-| 格式 | 能力 |
+| 版式 | 说明 |
 |------|------|
-| Excel (.xlsx) | 生成（美化）/ 解析 / 数据源转换 |
-| PDF (.pdf) | docx → PDF 三引擎降级转换 / 元信息 |
-| PPT (.pptx) | 生成（8 版式 × 4 主题）/ 解析 |
+| cover | 封面（标题/副标题/作者，黑色标题默认） |
+| agenda | 目录页 |
+| section | 章节页（编号圆点 `index` + 色带） |
+| content | 内容页（要点列表 **或 cards 卡片化**） |
+| stats | 大数字数据卡片（最多 4 卡并排） |
+| chart | 原生图表（column/bar/line/pie） |
+| two_column | 双栏对比 |
+| table | 表格页（表头主色填充） |
+| image | 图片页（缺失自动警告） |
+| closing | 结尾页 |
+
+主题：`corporate` 商务 / `academic` 学术 / `launch` 发布会（黑底白字）/ `minimal` 极简
 
 ## 用法示例
 
@@ -178,10 +162,11 @@ pip install -r mcp/document-toolkit/requirements.txt
 
 | 输入 | 结果 |
 |------|------|
-| "写一份关于开展安全生产检查的通知" | 党政公文 GB/T 9704 排版（标题 2 号小标宋、正文 3 号仿宋、28 磅固定行距） |
+| "写一份关于开展安全生产检查的通知" | 党政公文 GB/T 9704 排版（2 号小标宋、3 号仿宋、28 磅固定行距） |
 | "拟一份软件开发委托合同" | 合同规范排版 + 必备条款骨架 |
 | "写一份民事起诉状" | 法律文书排版（诉讼请求/事实与理由结构） |
-| "做一份产品发布会的 PPT" | 8 版式 PPT（launch 主题黑底金字） |
+| "做一份产品发布会的 PPT" | launch 主题（黑底金字） |
+| "把这几个人的信息做成花名册 Excel" | 美化报表（表头填充/冻结/筛选） |
 
 ### 基于已有文件
 
@@ -203,15 +188,27 @@ pip install -r mcp/document-toolkit/requirements.txt
 
 | 输入 | 结果 |
 |------|------|
-| "把这份通知转成 PDF" | convert_to_pdf（自动选择 Word/WPS/LibreOffice 引擎） |
+| "把这份通知转成 PDF" | convert_to_pdf（Word/WPS/LibreOffice 自动选引擎） |
+| "把合同里的表格导出成 Excel" | docx_tables_to_excel |
+| "把这份报告转成 Markdown" | docx_to_markdown |
 | "看看这个 PDF 有几页" | pdf_info |
 
 ## 工作原理（四层工作流）
 
 1. **意图识别**：从自然语言提取文档类型、主题、要求（关键词表 + 规则）
-2. **类型判定**：映射到 10 类文档规范或 3 类格式（最长关键词优先）
+2. **类型判定**：映射到 10 类文档规范或 3 类附加格式（最长关键词优先）
 3. **结构决策**：未提供文件→从零生成；提供文件+改结构→改造建议；提供文件+不改结构→锁定结构；范文→导入模板
 4. **计划与执行**：章节规划 → 内容要点 → 排版参数 → 生成 → **回读校验**（parse 验证结构/字体/行距）
+
+## 工程化质量
+
+| 维度 | 措施 |
+|------|------|
+| 🧪 测试 | 46 项自动化测试（生成/解析往返、健壮性、错误路径、互转、图表、页眉页脚） |
+| 🔬 CI | GitHub Actions：Python 3.10/3.11/3.12 三版本矩阵 + LibreOffice PDF 测试 |
+| 🔒 数据安全 | 原子写入（临时文件+replace 防损坏）、异常路径脱敏（`<path>`）、模板并发锁 |
+| 🔥 热重载 | 源码 mtime 监听 + 依赖序 reload + 语法预检（改代码免重启） |
+| 🛡 健壮性 | 错误路径全部返回 `{ok:false}` JSON、边界防护（空输入/超长/非法值回退） |
 
 ## 目录结构
 
@@ -219,19 +216,19 @@ pip install -r mcp/document-toolkit/requirements.txt
 document-agent/
 ├── skills/
 │   └── document-intelligence/     # 文档智能写作 Skill
-│       ├── SKILL.md               # 主 playbook（四层工作流 + 决策树）
+│       ├── SKILL.md               # 主 playbook（四层工作流 + 决策树 + 契约）
 │       ├── templates/             # 10 类文档排版规范（人读）
-│       └── examples/              # 典型输入示例（28+ 条）
+│       └── examples/              # 典型输入示例（30+ 条）
 ├── mcp/
-│   └── document-toolkit/          # 文档读写 MCP server（19 个工具）
+│   └── document-toolkit/          # 文档读写 MCP server（22 个工具）
 │       ├── server.py              # FastMCP 入口 + 热重载机制
-│       ├── docx_toolkit/          # Word 模块（解析/生成/模板/批量）
+│       ├── docx_toolkit/          # Word 模块（解析/生成/模板/批量/Markdown）
 │       ├── excel_toolkit/         # Excel 模块（生成/解析/数据源）
 │       ├── pdf_toolkit/           # PDF 模块（三引擎转换）
-│       └── pptx_toolkit/          # PPT 模块（生成/解析）
+│       └── pptx_toolkit/          # PPT 模块（生成/解析/图表）
 ├── docs/                          # architecture / usage / import-flow
 ├── examples/                      # 一键生成 10 类示例文档
-├── tests/                         # 18 个自动化测试
+├── tests/                         # 46 个自动化测试
 ├── LICENSE                        # MIT
 └── README.md
 ```
@@ -248,13 +245,16 @@ A: 需要本机安装 Word / WPS / LibreOffice 三者之一。转换引擎自动
 A: 设计约定：标题与正文文字默认黑色，主题色仅用于装饰（标题条/表头/强调线）。需要彩色标题时用 slide 级 `title_color`（如 `"#1F4E79"`）指定。
 
 **Q: 修改了 MCP server 代码，需要重启吗？**
-A: 修改实现代码（工具函数内部逻辑）无需重启——server 内置热重载，下次工具调用自动加载新代码。仅新增/删除工具（工具列表变化）需要重启。
+A: 修改实现代码无需重启——server 内置热重载，下次工具调用自动加载新代码。仅新增/删除工具（工具列表变化）需要重启。
 
 **Q: 能在没有 Office 的机器上生成文档吗？**
 A: 可以。docx/xlsx/pptx 由 python-docx/openpyxl/python-pptx 直接写 OOXML，不依赖 Office；仅 PDF 转换需要 Office 套件之一。
 
 **Q: Excel 数据怎么用来批量生成 Word？**
 A: `excel_to_data` 把 Excel 首行作为字段名转 JSON 行数组 → 作为 `batch_build` 的 data_rows，模板中用 `{字段名}` 占位即可。
+
+**Q: 输出文件会覆盖已有文件吗？**
+A: 所有生成采用原子写入（临时文件 + replace），生成过程异常不会损坏原文件；PDF 转换会先删除旧文件但仅在所有引擎均失败时才可能丢失（建议输出到新路径）。
 
 ## 路线图
 
@@ -263,11 +263,12 @@ A: `excel_to_data` 把 Excel 首行作为字段名转 JSON 行数组 → 作为 
 - [x] 结构决策增强（`suggest_restructure` 改造建议）
 - [x] Excel 生成/解析/数据源（`build_excel` / `parse_excel` / `excel_to_data`）
 - [x] PDF 导出（`convert_to_pdf` 三引擎降级）
-- [x] PPT 生成/解析（`build_pptx` / `parse_pptx`，8 版式/4 主题）
+- [x] PPT 生成/解析（`build_pptx` / `parse_pptx`，10 版式/4 主题）
 - [x] MCP server 热重载（改代码免重启）
-- [ ] Markdown 导出
-- [ ] docx ↔ xlsx 表格互转
-- [ ] 在线 API 服务
+- [x] 格式互转（docx ↔ xlsx 表格、docx → Markdown）
+- [x] PPT 原生图表 + docx 页眉页脚页码
+- [x] 测试驱动加固（46 项健壮性测试 + 多 Agent 审查）
+- [ ] 在线 API 服务（规划中）
 
 ## License
 
@@ -275,4 +276,4 @@ A: `excel_to_data` 把 Excel 首行作为字段名转 JSON 行数组 → 作为 
 
 ## 相关项目
 
-- [ppt-master](https://github.com/hugohe3/ppt-master)（MIT © Hugo He）：高级 PPT 设计工作流（SVG 精细排版、AI 配图、模板填充增强）
+- [ppt-master](https://github.com/hugohe3/ppt-master)（MIT © Hugo He）：高级 PPT 设计工作流（SVG 精细排版、AI 配图、模板填充增强），本项目的基础 PPT 能力与其互补
