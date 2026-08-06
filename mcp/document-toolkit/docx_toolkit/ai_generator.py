@@ -227,6 +227,8 @@ def generate_spec(doc_type: str, topic: str, extra: str = "", retries: int = 2) 
         "government_report": "政府工作报告", "techdoc": "技术文档", "resume": "简历",
         "notice": "通知公告", "meeting_minutes": "会议纪要", "speech": "演讲稿",
         "proposal": "方案建议书", "invitation": "邀请函",
+        "news_release": "新闻稿", "work_summary": "工作总结",
+        "product_manual": "产品说明书", "acceptance_report": "验收报告",
     }
     doc_name = _NAMES.get(doc_type, doc_type)
     extra_section = f"额外要求：{extra}" if extra else ""

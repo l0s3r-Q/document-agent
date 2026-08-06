@@ -1,0 +1,21 @@
+{
+  "meta": {"name": "工作总结", "doc_type": "work_summary", "source": "builtin", "description": "工作总结规范：标题黑体小二居中，正文宋体小四 1.5 倍行距；结构：总体概述 → 主要工作/成绩 → 存在问题 → 经验体会 → 下一步计划", "skeleton_hint": "工作总结标题（如：XXX年度工作总结）→ 一、总体概述 → 二、主要工作与成绩（分点+数据）→ 三、存在问题与不足 → 四、经验体会 → 五、下一步工作计划 → 落款"},
+  "page": {"top_cm": 2.54, "bottom_cm": 2.54, "left_cm": 3.17, "right_cm": 3.17},
+  "styles": [
+    {"role": "title", "font_name": "黑体", "size_pt": 18, "bold": true, "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+    {"role": "heading1", "font_name": "黑体", "size_pt": 14, "bold": false, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+    {"role": "heading2", "font_name": "黑体", "size_pt": 13, "bold": false, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+    {"role": "heading3", "font_name": "宋体", "size_pt": 12, "bold": true, "align": "LEFT", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+    {"role": "body", "font_name": "宋体", "size_pt": 12, "bold": false, "align": "JUSTIFY", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5, "first_line_indent_chars": 2},
+    {"role": "table", "font_name": "宋体", "size_pt": 10.5, "bold": false, "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.0}
+  ],
+  "skeleton": [
+    {"level": 0, "text": "工作总结标题（如：2026年上半年工作总结）"},
+    {"level": 1, "text": "一、总体概述"},
+    {"level": 1, "text": "二、主要工作与成绩（分点 + 数据支撑）"},
+    {"level": 1, "text": "三、存在问题与不足"},
+    {"level": 1, "text": "四、经验体会"},
+    {"level": 1, "text": "五、下一步工作计划"},
+    {"level": 0, "text": "落款：单位、日期（右对齐）"}
+  ]
+}

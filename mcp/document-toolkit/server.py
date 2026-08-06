@@ -242,7 +242,7 @@ def import_template(docx_path: str, template_name: str) -> str:
 
 @mcp.tool()
 def get_template(doc_type: str) -> str:
-    """读取预置模板（doc_type ∈ general|thesis|official|contract|bidding|legal|government_report|techdoc|resume|notice|meeting_minutes|speech|proposal|invitation），返回 JSON。"""
+    """读取预置模板（doc_type ∈ general|thesis|official|contract|bidding|legal|government_report|techdoc|resume|notice|meeting_minutes|speech|proposal|invitation|news_release|work_summary|product_manual|acceptance_report），返回 JSON。"""
     _hot_reload()
     t = docx_toolkit.templates_store.get_builtin(doc_type)
     if t is None:
@@ -522,7 +522,7 @@ def generate_docx(doc_type: str, topic: str, output_path: str = "", extra: str =
     """AI 生成文档：输入类型+主题 → LLM 生成内容 → 构建 docx（防 AI 味自检）。
 
     参数：
-      doc_type:    文档类型（general/thesis/official/contract/bidding/legal/government_report/techdoc/resume/notice/meeting_minutes/speech/proposal/invitation）
+      doc_type:    文档类型（general/thesis/official/contract/bidding/legal/government_report/techdoc/resume/notice/meeting_minutes/speech/proposal/invitation/news_release/work_summary/product_manual/acceptance_report）
       topic:       主题（如"关于开展安全生产检查的通知"）
       output_path: 输出路径（留空则自动生成）
       extra:       额外要求/要点（可空，如"重点强调消防与用电安全，附检查表"）
