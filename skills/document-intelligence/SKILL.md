@@ -339,6 +339,35 @@ description: 文档智能写作代理。理解用户自然语言需求，自动�
 4. **数据真实**：数字/日期/人名不得虚构或编造，材料中没有的信息明确说明
 5. **交付前自检**：生成后调用 `quality_check`，error 全部清零；warning 逐条评估，能改则改
 
+## 五·十、在线编辑协作（wps-office 集成，可选）
+
+当环境已注册 `wps-office` MCP（操作真实 WPS Office）时，与 document-toolkit 形成**生成 → 打开 → 编辑 → 导出**闭环：
+
+### 协作触发词
+
+| 用户意图 | 主用工具 | 协作工具 |
+|---------|---------|---------|
+| "生成后打开看看/在 WPS 里打开" | `build_docx/build_excel/build_pptx` | `wps_word_open_document` / `wps_excel_open_workbook` / `wps_ppt_open_presentation` |
+| "在 WPS 里美化/调整已打开文档" | （读当前文档） | `wps_word_set_font/set_paragraph`、`wps_excel_set_cell_format`、`wps_ppt_beautify` |
+| "把已打开文档按规范重排" | `parse_docx`/`build_docx` | `wps_word_get_document_text` 先取内容 |
+| "转 PDF/导出" | `convert_to_pdf` | `wps_common_save_as` / `wps_convert_to_pdf` |
+| "批量生成后复核" | `batch_build` | `wps_word_open_document` 抽查 |
+
+### 常用 wps-office 工具（与生成闭环配合）
+
+- **Word**：`wps_word_open_document(filePath)`、`wps_word_get_document_text`、`wps_word_insert_text(text, position)`、`wps_word_find_replace`、`wps_word_set_font`、`wps_word_generate_toc`、`wps_common_save_as(filePath, format)`、`wps_convert_to_pdf`
+- **Excel**：`wps_excel_open_workbook(filePath)`、`wps_excel_get_open_workbooks`、`wps_excel_set_cell_value(sheet, row, col, value)`、`wps_excel_set_formula(sheet, range, formula)`、`wps_excel_create_chart`、`wps_excel_create_pivot_table`、`wps_common_save_as`
+- **PPT**：`wps_ppt_open_presentation(filePath)`、`wps_ppt_get_slide_count`、`wps_ppt_add_slide`、`wps_ppt_set_slide_title`、`wps_ppt_beautify`、`wps_common_save_as`
+
+### 协作注意事项
+
+1. **文件锁**：WPS 打开的文件会被锁定。document-toolkit 的 `parse_docx/build_docx/convert_to_pdf` 操作同一文件前，需先 `wps_common_save_as` 另存副本，或关闭 WPS 文档
+2. **组件未打开**：Word/Excel/PPT 命令在对应组件未启动时会**快速失败（约 12 秒）**——先确认用户已打开对应类型文档
+3. **打开文件**：`wps_word_open_document`/`wps_excel_open_workbook`/`wps_ppt_open_presentation` 参数名是 **`filePath`**
+4. **写单元格**：`wps_excel_set_cell_value` 用 `sheet+row+col`；`wps_excel_set_formula` 用 `sheet+range+formula`
+5. **通用保存**：`wps_common_save_as(filePath, appType, format)`——`appType` ∈ wps/et/wpp，`format` ∈ docx/xlsx/pptx/pdf 等
+6. 详细工作流示例见 `docs/wps-office-integration.md`
+
 ## 六、执行约束
 
 1. 输出格式按场景选择：`.docx`（Word）/ `.xlsx`（Excel）/ `.pdf`（转换导出）/ `.pptx`（PPT），路径用**绝对路径**

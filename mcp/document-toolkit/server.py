@@ -46,6 +46,7 @@ import time
 import docx_toolkit.batch
 import docx_toolkit.builder
 import docx_toolkit.parser
+import docx_toolkit.quality
 import docx_toolkit.restructure
 import docx_toolkit.styles
 import docx_toolkit.templates_store
@@ -64,6 +65,7 @@ _HOT_RELOAD_ORDER = [
     "docx_toolkit.batch",
     "docx_toolkit.markdown",
     "docx_toolkit.restructure",
+    "docx_toolkit.quality",
     "excel_toolkit.builder",
     "excel_toolkit.parser",
     "pdf_toolkit.converter",

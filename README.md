@@ -280,12 +280,31 @@ A: 所有生成采用原子写入（临时文件 + replace），生成过程异�
 - [x] PPT 原生图表 + docx 页眉页脚页码
 - [x] 测试驱动加固（56 项健壮性测试 + 多 Agent 审查）
 - [x] 交付质量门禁（`quality_check` + SKILL 质量标准）
+- [x] wps-office 在线编辑协同（`docs/wps-office-integration.md` + SKILL 协作章节 + 示例）
 - [ ] 在线 API 服务（规划中）
 
 ## License
 
 [MIT](LICENSE)
 
+## 与 wps-office 的协同（在线编辑）
+
+document-agent 负责**离线生成/解析/转换**规范文档；[wps-office](https://github.com/lc2panda/wps-skills) 负责**在线操作真实 WPS Office**（Excel 82 / Word 32 / PPT 115 工具）。两者组合形成**生成 → 打开 → 编辑 → 导出**闭环：
+
+| 场景 | document-agent | wps-office |
+|------|---------------|-----------|
+| 生成即预览 | `build_docx/build_excel/build_pptx` 离线生成 | `wps_word_open_document` 打开预览 |
+| 生成后精修 | 按规范排版初稿 | `wps_word_set_font`、`wps_excel_set_cell_format`、`wps_ppt_beautify` |
+| 存量文档重排 | `parse_docx`/`build_docx` 重排 | `wps_word_get_document_text` 取内容 |
+| 转 PDF/导出 | `convert_to_pdf`（三引擎降级） | `wps_common_save_as` / `wps_convert_to_pdf` |
+| 批量复核 | `batch_build` 批量生成 | 打开抽查 |
+
+**部署**：两个 MCP 可共存注册（`document-toolkit` + `wps-office`），见 `docs/wps-office-integration.md`。
+**示例**：`examples/wps_workflow.py`（生成 → 质量检查 → 转 PDF → WPS 打开全链路）。
+
+---
+
 ## 相关项目
+
 
 - [ppt-master](https://github.com/hugohe3/ppt-master)（MIT © Hugo He）：高级 PPT 设计工作流（SVG 精细排版、AI 配图、模板填充增强），本项目的基础 PPT 能力与其互补
