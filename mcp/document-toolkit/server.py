@@ -240,7 +240,7 @@ def import_template(docx_path: str, template_name: str) -> str:
 
 @mcp.tool()
 def get_template(doc_type: str) -> str:
-    """读取预置模板（doc_type ∈ general|thesis|official|contract|bidding|legal|government_report|techdoc|resume|notice），返回 JSON。"""
+    """读取预置模板（doc_type ∈ general|thesis|official|contract|bidding|legal|government_report|techdoc|resume|notice|meeting_minutes|speech|proposal|invitation），返回 JSON。"""
     _hot_reload()
     t = docx_toolkit.templates_store.get_builtin(doc_type)
     if t is None:

@@ -24,7 +24,7 @@ BUILTIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "template
 SERVER_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 USER_DIR = os.path.join(SERVER_DIR, "user_templates")
 
-_DOC_TYPES = {"general", "thesis", "official", "contract", "bidding", "legal", "government_report", "techdoc", "resume", "notice"}
+_DOC_TYPES = {"general", "thesis", "official", "contract", "bidding", "legal", "government_report", "techdoc", "resume", "notice", "meeting_minutes", "speech", "proposal", "invitation"}
 
 
 def _ensure_user_dir():

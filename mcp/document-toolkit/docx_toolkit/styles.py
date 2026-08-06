@@ -136,4 +136,52 @@ BUILTIN_STYLES = {
             "table":     {"font_name": "宋体", "size_pt": 10.5, "bold": False, "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.0},
         },
     },
+    "meeting_minutes": {
+        "name": "会议纪要",
+        "page": {"top_cm": 2.54, "bottom_cm": 2.54, "left_cm": 3.17, "right_cm": 3.17},
+        "roles": {
+            "title":     {"font_name": "黑体", "size_pt": 18, "bold": True,  "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading1":  {"font_name": "黑体", "size_pt": 14, "bold": False, "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading2":  {"font_name": "黑体", "size_pt": 13, "bold": False, "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading3":  {"font_name": "宋体", "size_pt": 12, "bold": True,  "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "body":      {"font_name": "宋体", "size_pt": 12, "bold": False, "align": "JUSTIFY", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5, "first_line_indent_chars": 2},
+            "table":     {"font_name": "宋体", "size_pt": 10.5, "bold": False, "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.0},
+        },
+    },
+    "speech": {
+        "name": "演讲稿",
+        "page": {"top_cm": 2.54, "bottom_cm": 2.54, "left_cm": 3.17, "right_cm": 3.17},
+        "roles": {
+            "title":     {"font_name": "黑体", "size_pt": 18, "bold": True,  "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading1":  {"font_name": "黑体", "size_pt": 14, "bold": False, "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading2":  {"font_name": "黑体", "size_pt": 13, "bold": False, "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading3":  {"font_name": "宋体", "size_pt": 12, "bold": True,  "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "body":      {"font_name": "宋体", "size_pt": 12, "bold": False, "align": "JUSTIFY", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5, "first_line_indent_chars": 2},
+            "table":     {"font_name": "宋体", "size_pt": 10.5, "bold": False, "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.0},
+        },
+    },
+    "proposal": {
+        "name": "方案建议书",
+        "page": {"top_cm": 2.54, "bottom_cm": 2.54, "left_cm": 3.17, "right_cm": 3.17},
+        "roles": {
+            "title":     {"font_name": "黑体", "size_pt": 18, "bold": True,  "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading1":  {"font_name": "黑体", "size_pt": 14, "bold": False, "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading2":  {"font_name": "黑体", "size_pt": 13, "bold": False, "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading3":  {"font_name": "宋体", "size_pt": 12, "bold": True,  "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "body":      {"font_name": "宋体", "size_pt": 12, "bold": False, "align": "JUSTIFY", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5, "first_line_indent_chars": 2},
+            "table":     {"font_name": "宋体", "size_pt": 10.5, "bold": False, "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.0},
+        },
+    },
+    "invitation": {
+        "name": "邀请函",
+        "page": {"top_cm": 2.54, "bottom_cm": 2.54, "left_cm": 3.17, "right_cm": 3.17},
+        "roles": {
+            "title":     {"font_name": "宋体", "size_pt": 18, "bold": True,  "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading1":  {"font_name": "黑体", "size_pt": 14, "bold": False, "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading2":  {"font_name": "黑体", "size_pt": 13, "bold": False, "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "heading3":  {"font_name": "宋体", "size_pt": 12, "bold": True,  "align": "LEFT",   "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5},
+            "body":      {"font_name": "宋体", "size_pt": 12, "bold": False, "align": "JUSTIFY", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.5, "first_line_indent_chars": 2},
+            "table":     {"font_name": "宋体", "size_pt": 10.5, "bold": False, "align": "CENTER", "line_spacing_rule": "MULTIPLE", "line_spacing_multiple": 1.0},
+        },
+    },
 }
