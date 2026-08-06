@@ -50,6 +50,7 @@ import docx_toolkit.quality
 import docx_toolkit.restructure
 import docx_toolkit.styles
 import docx_toolkit.templates_store
+import docx_toolkit.ai_generator
 import excel_toolkit.builder
 import excel_toolkit.parser
 import pdf_toolkit.converter
@@ -66,6 +67,7 @@ _HOT_RELOAD_ORDER = [
     "docx_toolkit.markdown",
     "docx_toolkit.restructure",
     "docx_toolkit.quality",
+    "docx_toolkit.ai_generator",
     "excel_toolkit.builder",
     "excel_toolkit.parser",
     "pdf_toolkit.converter",
@@ -511,6 +513,42 @@ def merge_pdfs(pdf_paths_json: str, output_path: str) -> str:
         return _ok(pdf_toolkit.converter.merge_pdfs(paths, output_path))
     except json.JSONDecodeError as e:
         return _err(f"JSON 解析失败: {e}")
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def generate_docx(doc_type: str, topic: str, output_path: str = "", extra: str = "") -> str:
+    """AI 生成文档：输入类型+主题 → LLM 生成内容 → 构建 docx（防 AI 味自检）。
+
+    参数：
+      doc_type:    文档类型（general/thesis/official/contract/bidding/legal/government_report/techdoc/resume/notice/meeting_minutes/speech/proposal/invitation）
+      topic:       主题（如"关于开展安全生产检查的通知"）
+      output_path: 输出路径（留空则自动生成）
+      extra:       额外要求/要点（可空，如"重点强调消防与用电安全，附检查表"）
+
+    说明：
+      - 依赖 AI_GEN_PROVIDER（默认 deepseek）对应的 API key 环境变量
+      - 生成内容经过防 AI 味自检（AIGC 痕迹/占位符），不合格自动重生成
+      - 未配置 API key 时返回明确提示
+    """
+    _hot_reload()
+    try:
+        if not docx_toolkit.ai_generator.is_configured():
+            return _err("未配置 AI 生成 API key。请设置环境变量（默认 DEEPSEEK_API_KEY，或 AI_GEN_PROVIDER=mimo 用 MIMO_API_KEY）")
+        spec = docx_toolkit.ai_generator.generate_spec(doc_type, topic, extra)
+        if not output_path:
+            import re as _re
+            safe = _re.sub(r"[\\/:*?\"<>|]", "_", topic)[:40]
+            output_path = os.path.join(os.path.expanduser("~"), "Desktop", "文档", f"{safe}.docx")
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        result = docx_toolkit.builder.build(spec, output_path)
+        # 附质量体检摘要
+        try:
+            qc = docx_toolkit.quality.quality_check(output_path)
+            return _ok({"path": output_path, "spec": spec, "quality": qc})
+        except Exception:
+            return _ok({"path": output_path, "spec": spec})
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 

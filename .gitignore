@@ -28,3 +28,4 @@ mcp/document-toolkit/user_templates/
 # 测试
 .pytest_cache/
 *.log
+tests/_out_new_types/
