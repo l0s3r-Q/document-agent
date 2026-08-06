@@ -1,6 +1,6 @@
 """document-toolkit MCP Server —— 文档解析/生成/模板导入工具箱。
 
-工具（24）：
+工具（31）：
   - parse_docx(path)            解析 docx 页面/样式/结构
   - extract_structure(path)     仅提取标题结构树（不改结构场景）
   - build_docx(spec_json, out)  按 DocumentSpec 生成 docx
@@ -18,6 +18,10 @@
   - excel_to_data(path, sheet?) Excel 数据表 → JSON 行数组（批量数据源）
   - convert_to_pdf(docx, out?)  docx → PDF（Word/WPS/LibreOffice 降级链）
   - pdf_info(path)              PDF 元信息（页数/大小）
+  - pdf_extract_text(path, max?) 提取 PDF 文本（PDF→docx 复用）
+  - generate_excel(topic, out?, extra?)  AI 生成 Excel 报表
+  - generate_pptx(topic, out?, extra?)    AI 生成 PPT
+  - ai_rewrite(text, mode?, extra?)     AI 改写/润色/摘要
   - build_pptx(spec, out)       按 PptxSpec 生成 pptx（8 版式/4 主题）
   - parse_pptx(path)            解析 pptx（页/形状/表格）
   - docx_tables_to_excel(d,o)  docx 表格 → xlsx
@@ -393,6 +397,20 @@ def pdf_info(path: str) -> str:
     """读取 PDF 元信息（页数/文件大小）。"""
     _hot_reload()
     try:
+        return _ok(pdf_toolkit.converter.pdf_info(path))
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def pdf_extract_text(path: str, max_pages: int = 0) -> str:
+    """提取 PDF 文本内容（按页），支持 max_pages 限制（0=全部）。
+
+    用途：PDF → 文本 → 重新排版/生成 docx；配合 build_docx 实现 PDF 内容复用。
+    返回：{path, pages, text_pages: [{page, text}], total_chars}
+    """
+    _hot_reload()
+    try:
         if not os.path.exists(path):
             return _err(f"文件不存在: {path}")
         try:
@@ -401,9 +419,20 @@ def pdf_info(path: str) -> str:
             return _err("缺少依赖 pypdf：请执行 pip install pypdf")
         with open(path, "rb") as f:
             reader = PdfReader(f)
-            pages = len(reader.pages)
-        return _ok({"path": path, "pages": pages,
-                    "size_bytes": os.path.getsize(path)})
+            total = len(reader.pages)
+            limit = max_pages if max_pages > 0 else total
+            pages_out = []
+            total_chars = 0
+            for i in range(min(limit, total)):
+                try:
+                    text = reader.pages[i].extract_text() or ""
+                    text = text.strip()
+                except Exception:
+                    text = ""
+                total_chars += len(text)
+                pages_out.append({"page": i + 1, "text": text})
+        return _ok({"path": path, "pages": total, "extracted_pages": len(pages_out),
+                    "total_chars": total_chars, "pages": pages_out})
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 
@@ -518,6 +547,51 @@ def merge_pdfs(pdf_paths_json: str, output_path: str) -> str:
 
 
 @mcp.tool()
+def batch_build_multi(spec_templates_json: str, data_rows_json: str, output_dir: str,
+                      filename_fields_json: str = "") -> str:
+    """多模板串联批量生成：每行数据按模板列表各生成一份文档。
+
+    场景：花名册 → 每人生成"通知+名单+汇总"多份。
+    参数：
+      spec_templates_json: 模板数组（每份 spec 含 {变量} 占位）
+      data_rows_json:      数据行数组
+      output_dir:          输出目录
+      filename_fields_json: 可选，与模板对应的文件名取数字段数组
+    """
+    _hot_reload()
+    try:
+        templates = json.loads(spec_templates_json)
+        rows = json.loads(data_rows_json)
+        fields = json.loads(filename_fields_json) if filename_fields_json else None
+        if not isinstance(templates, list) or not isinstance(rows, list):
+            return _err("spec_templates_json 和 data_rows_json 必须是数组")
+        return _ok(docx_toolkit.batch.batch_build_multi(templates, rows, output_dir, fields))
+    except json.JSONDecodeError as e:
+        return _err(f"JSON 解析失败: {e}")
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def suggest_formula(desc: str, extra: str = "") -> str:
+    """AI 推荐 Excel 公式（支持 WPS 表格）。
+
+    参数：
+      desc:  自然语言描述（如"查找产品名对应的价格"）
+      extra: 补充约束（如"数据在A:B两列"）
+    返回：{formula, explanation, alternatives}
+    """
+    _hot_reload()
+    try:
+        if not docx_toolkit.ai_generator.is_configured():
+            return _err("未配置 AI 生成 API key（默认 DEEPSEEK_API_KEY）")
+        result = docx_toolkit.ai_generator.suggest_formula(desc, extra)
+        return _ok(result)
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
 def generate_docx(doc_type: str, topic: str, output_path: str = "", extra: str = "") -> str:
     """AI 生成文档：输入类型+主题 → LLM 生成内容 → 构建 docx（防 AI 味自检）。
 
@@ -549,6 +623,77 @@ def generate_docx(doc_type: str, topic: str, output_path: str = "", extra: str =
             return _ok({"path": output_path, "spec": spec, "quality": qc})
         except Exception:
             return _ok({"path": output_path, "spec": spec})
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def generate_excel(topic: str, output_path: str = "", extra: str = "") -> str:
+    """AI 生成 Excel 报表：输入主题 → LLM 生成报表数据 → 构建 xlsx。
+
+    参数：
+      topic:       主题（如"各部门季度安全检查统计表"）
+      output_path: 输出路径（留空自动生成）
+      extra:       额外要求/字段约束（可空）
+    """
+    _hot_reload()
+    try:
+        if not docx_toolkit.ai_generator.is_configured():
+            return _err("未配置 AI 生成 API key（默认 DEEPSEEK_API_KEY）")
+        spec = docx_toolkit.ai_generator.generate_excel_spec(topic, extra)
+        if not output_path:
+            import re as _re
+            safe = _re.sub(r"[\\/:*?\"<>|]", "_", topic)[:40]
+            output_path = os.path.join(os.path.expanduser("~"), "Desktop", "文档", f"{safe}.xlsx")
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        result = excel_toolkit.builder.build(spec, output_path)
+        return _ok({"path": output_path, "spec": spec, "build": result})
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def generate_pptx(topic: str, output_path: str = "", extra: str = "") -> str:
+    """AI 生成 PPT：输入主题 → LLM 生成大纲内容 → 构建 pptx。
+
+    参数：
+      topic:       主题（如"公司年度经营总结汇报"）
+      output_path: 输出路径（留空自动生成）
+      extra:       额外要求（页数/风格/重点，可空）
+    """
+    _hot_reload()
+    try:
+        if not docx_toolkit.ai_generator.is_configured():
+            return _err("未配置 AI 生成 API key（默认 DEEPSEEK_API_KEY）")
+        spec = docx_toolkit.ai_generator.generate_pptx_spec(topic, extra)
+        if not output_path:
+            import re as _re
+            safe = _re.sub(r"[\\/:*?\"<>|]", "_", topic)[:40]
+            output_path = os.path.join(os.path.expanduser("~"), "Desktop", "文档", f"{safe}.pptx")
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        result = pptx_toolkit.builder.build(spec, output_path)
+        return _ok({"path": output_path, "spec": spec, "build": result})
+    except Exception as e:  # noqa: BLE001
+        return _err_sanitized(e)
+
+
+@mcp.tool()
+def ai_rewrite(text: str, mode: str = "polish", extra: str = "") -> str:
+    """AI 改写/润色/摘要文本（防 AI 味）。
+
+    参数：
+      text:  要处理的文本（可选从文件读取，见 extra）
+      mode:  polish（润色，默认）| rewrite（改写）| summary（摘要）| expand（扩写）
+      extra: 额外要求（可空）
+    """
+    _hot_reload()
+    try:
+        if not docx_toolkit.ai_generator.is_configured():
+            return _err("未配置 AI 生成 API key（默认 DEEPSEEK_API_KEY）")
+        if not text or not text.strip():
+            return _err("text 不能为空")
+        result = docx_toolkit.ai_generator.rewrite_text(text, mode, extra)
+        return _ok({"mode": mode, "result": result})
     except Exception as e:  # noqa: BLE001
         return _err_sanitized(e)
 

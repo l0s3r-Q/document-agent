@@ -98,3 +98,54 @@ def batch_build(spec_template: dict, data_rows: list[dict], output_dir: str,
         "warnings": warnings,
         "results": results,
     }
+
+
+def batch_build_multi(spec_templates: list[dict], data_rows: list[dict], output_dir: str,
+                      filename_fields: list[str | None] | None = None) -> dict:
+    """多模板串联批量生成：每行数据 → 按模板列表各生成一份文档。
+
+    spec_templates: 模板列表（每个是一份 spec，含 {变量} 占位）
+    data_rows:      数据行（每行一组变量）
+    output_dir:     输出目录
+    filename_fields: 可选，与 spec_templates 对应的文件名取数字段（None=自动）
+
+    场景：一份花名册 → 每人生成"通知+名单+汇总"三份文档。
+    """
+    if not spec_templates or not isinstance(spec_templates, list):
+        return {"ok": False, "error": "spec_templates 必须是非空数组"}
+    if not data_rows or not isinstance(data_rows, list):
+        return {"ok": False, "error": "data_rows 必须是非空数组"}
+    if not output_dir:
+        return {"ok": False, "error": "output_dir 不能为空"}
+    if filename_fields and len(filename_fields) != len(spec_templates):
+        return {"ok": False, "error": "filename_fields 长度必须与 spec_templates 一致"}
+
+    os.makedirs(output_dir, exist_ok=True)
+    results, warnings = [], []
+    for i, row in enumerate(data_rows, 1):
+        for ti, tpl in enumerate(spec_templates):
+            spec = _render_tree(copy.deepcopy(tpl), row, warnings)
+            ffield = (filename_fields[ti] if filename_fields else None)
+            if ffield and ffield in row:
+                fname = f"{i:03d}_{str(row[ffield])}.docx"
+            else:
+                fname = f"{i:03d}_{(spec.get('title') or f'doc_{ti+1}')[:40]}.docx"
+            out = _safe_filename(output_dir, fname, i * 100 + ti)
+            try:
+                r = build(spec, out)
+                results.append({"index": i, "template": ti, "file": out, "ok": r["ok"]})
+            except Exception as e:  # noqa: BLE001
+                results.append({"index": i, "template": ti, "file": out, "ok": False,
+                                "error": f"{type(e).__name__}: {e}"})
+
+    return {
+        "ok": True,
+        "total": len(data_rows) * len(spec_templates),
+        "rows": len(data_rows),
+        "templates": len(spec_templates),
+        "succeeded": sum(1 for r in results if r["ok"]),
+        "failed": sum(1 for r in results if not r["ok"]),
+        "output_dir": output_dir,
+        "warnings": warnings,
+        "results": results,
+    }

@@ -259,3 +259,125 @@ def is_configured() -> bool:
     """是否有可用的 provider 配置。"""
     cfg = _provider_cfg()
     return bool(os.environ.get(cfg["api_key_env"]))
+
+
+# ══════════════════════════ Excel / PPTX 三格式 AI 生成 ══════════════════════════
+
+_EXCEL_PROMPT = """你是一位资深数据分析师。请为以下需求生成一个 Excel 报表 spec。
+
+主题：{topic}
+{extra}
+
+输出规则（只输出 JSON，无其他文字）：
+- spec 契约：{{"sheets": [{{"name": "表名", "rows": [[...]], "header_row": true, "fill": "blue"}}]}}
+- rows 第一行为表头（列名），后续为数据行
+- 数据要真实合理、有信息量（5-15 行数据），不要留空
+- 表名用中文（如"数据明细""汇总"），可多个 sheet
+- 严禁 {{{{变量}}}} 占位符、严禁"待补充"
+- 防 AI 腔：不用"综上所述/总而言之"等套话"""
+
+_PPTX_PROMPT = """你是一位资深演示文稿策划。请为以下主题生成 PPT spec。
+
+主题：{topic}
+{extra}
+
+输出规则（只输出 JSON，无其他文字）：
+- spec 契约：{{"title": "标题", "theme": "corporate|academic|launch|minimal", "slides": [{{"type": "cover|agenda|section|content|two_column|table|chart|closing", "title": "...", "bullets": [...], "items": [...], "rows": [[...]], "chart_type": "column|bar|line|pie", "categories": [...], "series": [{{"name": "...", "values": [...]}}]}}]}}
+- 5-10 页，覆盖：封面 → 目录 → 章节 → 内容（分点）→ 数据（表格或图表）→ 结尾
+- bullets 用 > 表示子要点；内容要具体有信息量
+- 严禁 {{{{变量}}}} 占位符、严禁"待补充"
+- 防 AI 腔：不用"综上所述/总而言之"等套话"""
+
+
+def _generate_format_spec(template: str, topic: str, extra: str, retries: int = 2) -> dict:
+    """通用：按模板生成指定格式 spec，含防 AI 味自检重试。"""
+    extra_section = f"额外要求：{extra}" if extra else ""
+    prompt = template.format(topic=topic, extra=extra_section)
+
+    last_err = ""
+    for attempt in range(retries + 1):
+        try:
+            raw = _chat_completion(prompt, temperature=0.7 if attempt == 0 else 0.9)
+            spec = _extract_json(raw)
+            hits = _has_ai_flavor(spec)
+            if hits:
+                last_err = f"含 AI 腔：{hits[0]}"
+                prompt += f"\n\n上一次生成不合格：{hits[0]}。请改写为自然、具体的表达，严禁该词。"
+                continue
+            return spec
+        except Exception as e:  # noqa: BLE001
+            last_err = str(e)
+    raise RuntimeError(f"AI 生成失败（重试 {retries} 次）：{last_err}")
+
+
+def generate_excel_spec(topic: str, extra: str = "", retries: int = 2) -> dict:
+    """生成 ExcelSpec JSON（AI 报表数据）。"""
+    return _generate_format_spec(_EXCEL_PROMPT, topic, extra, retries)
+
+
+def generate_pptx_spec(topic: str, extra: str = "", retries: int = 2) -> dict:
+    """生成 PptxSpec JSON（AI PPT 大纲+内容）。"""
+    return _generate_format_spec(_PPTX_PROMPT, topic, extra, retries)
+
+
+# ══════════════════════════ AI 文本改写/润色/摘要 ══════════════════════════
+
+_REWRITE_PROMPT = """你是一位资深中文文书修改专家。请对以下文本进行{task}。
+
+原文：
+{text}
+
+{extra}
+
+输出规则：
+- 只输出处理后的文本，不要任何解释、markdown 标记、引号包裹
+- 保留文体与信息完整性，去除 AI 腔（总而言之/综上所述/值得注意的是 等套话）
+- 语言自然、具体，像有经验的办公室文书人员写的
+- 严禁出现"待补充"/"XXX"/{{变量}} 等占位
+- 结束不用空洞总结句"""
+
+
+def rewrite_text(text: str, mode: str = "polish", extra: str = "") -> str:
+    """AI 改写/润色/摘要文本。
+
+    mode: polish（润色，默认）| rewrite（改写）| summary（摘要）| expand（扩写）
+    extra: 额外要求（可空）
+    """
+    op_map = {
+        "polish": ("润色优化", "保持原意，优化表达，使句子流畅自然，删去冗余套话"),
+        "rewrite": ("改写", "以更专业的书面语重新表达，优化逻辑与措辞"),
+        "summary": ("摘要", "提取核心要点，控制在原文 1/3 长度，条理清晰"),
+        "expand": ("扩写", "在原文基础上补充细节与论据，内容更充实"),
+    }
+    op, desc = op_map.get(mode, op_map["polish"])
+    prompt = _REWRITE_PROMPT.format(task=op, text=text, extra=desc + ("\n" + extra if extra else ""))
+    return _chat_completion(prompt, temperature=0.6, max_tokens=4096).strip()
+
+
+# ══════════════════════════ Excel 公式建议 ══════════════════════════
+
+_FORMULA_PROMPT = """你是一位 Excel 公式专家。请根据用户描述推荐 Excel 公式。
+
+需求：{desc}
+{extra}
+
+输出规则（只输出 JSON，无其他文字）：
+- 返回 {{"formula": "=公式", "explanation": "简要说明（20 字内）", "alternatives": ["备选公式1", ...]}}
+- formula 用标准 Excel 语法，兼容 WPS 表格
+- 若需求不明确，在 explanation 说明需要的补充信息
+- 严禁 {{{{变量}}}} 占位符"""
+
+
+def suggest_formula(desc: str, extra: str = "") -> dict:
+    """AI 推荐 Excel 公式。返回 {formula, explanation, alternatives}。"""
+    prompt = _FORMULA_PROMPT.format(desc=desc, extra=("补充：" + extra if extra else ""))
+    raw = _chat_completion(prompt, temperature=0.4, max_tokens=1024)
+    try:
+        spec = _extract_json(raw)
+        # 归一化：兼容 formula/formulaLocal
+        if "formula" not in spec and "formulaLocal" in spec:
+            spec["formula"] = spec["formulaLocal"]
+        return spec
+    except ValueError:
+        # LLM 返回非 JSON（纯公式文本），包一层
+        return {"formula": raw.strip(), "explanation": "", "alternatives": []}

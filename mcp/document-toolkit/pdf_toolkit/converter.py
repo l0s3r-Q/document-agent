@@ -212,3 +212,44 @@ def merge_pdfs(pdf_paths: list[str], output_path: str) -> dict:
     if missing:
         result["warnings"] = [f"文件不存在已跳过: {m}" for m in missing]
     return result
+
+
+def extract_text(path: str, max_pages: int = 0) -> dict:
+    """提取 PDF 文本（按页）。max_pages=0 表示全部。"""
+    if not os.path.exists(path):
+        return {"ok": False, "error": f"文件不存在: {path}"}
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        return {"ok": False, "error": "缺少依赖 pypdf：请执行 pip install pypdf"}
+    with open(path, "rb") as f:
+        reader = PdfReader(f)
+        total = len(reader.pages)
+        limit = max_pages if max_pages > 0 else total
+        pages_out = []
+        total_chars = 0
+        for i in range(min(limit, total)):
+            try:
+                text = reader.pages[i].extract_text() or ""
+                text = text.strip()
+            except Exception:
+                text = ""
+            total_chars += len(text)
+            pages_out.append({"page": i + 1, "text": text})
+    return {"ok": True, "path": path, "pages": total,
+            "extracted_pages": len(pages_out), "total_chars": total_chars,
+            "text_pages": pages_out}
+
+
+def pdf_info(path: str) -> dict:
+    """PDF 元信息：页数/大小。"""
+    if not os.path.exists(path):
+        return {"ok": False, "error": f"文件不存在: {path}"}
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        return {"ok": False, "error": "缺少依赖 pypdf：请执行 pip install pypdf"}
+    with open(path, "rb") as f:
+        reader = PdfReader(f)
+        pages = len(reader.pages)
+    return {"ok": True, "path": path, "pages": pages, "size_bytes": os.path.getsize(path)}
