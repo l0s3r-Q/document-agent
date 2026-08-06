@@ -73,11 +73,41 @@ def _check_text(text: str, issues: list, where: str, check_sentence_end: bool = 
 
 
 def check_docx(path: str) -> dict:
-    """docx 质量体检：内容痕迹 + 排版 + 结构。"""
+    """docx 质量体检：内容痕迹 + 排版 + 结构 + 重复段落 + 数据一致性。"""
     data = parse_docx(path)
     issues = []
     texts_checked = 0
-    for i, item in enumerate(data.get("structure", [])):
+    structure = data.get("structure", [])
+    # ── 重复段落检测（AI 常见：整段内容高度重复/复读）──
+    prev_texts = []
+    for i, item in enumerate(structure):
+        stype = item.get("type", "paragraph")
+        text = item.get("text", "")
+        if stype in ("paragraph", "title") and text and len(text.strip()) >= 12:
+            norm = re.sub(r"\s+", "", text)
+            # 与最近 8 段比较，相似度 > 0.9 视为重复
+            for pi, prev in enumerate(prev_texts):
+                if not prev or abs(len(norm) - len(prev)) > max(4, len(norm) // 5):
+                    continue
+                # 简单相似度：公共前缀比例
+                common = 0
+                for a, b in zip(norm, prev):
+                    if a == b:
+                        common += 1
+                    else:
+                        break
+                if common > 0 and common / max(len(norm), len(prev)) > 0.9:
+                    issues.append({
+                        "level": "warning", "type": "dup_paragraph",
+                        "location": f"第{i + 1}段",
+                        "detail": f"与前文段落重复度高（相似前缀 {common} 字）",
+                    })
+                    break
+            prev_texts.append(norm)
+            if len(prev_texts) > 8:
+                prev_texts.pop(0)
+
+    for i, item in enumerate(structure):
         stype = item.get("type", "paragraph")
         text = item.get("text", "")
         is_heading = stype in ("heading1", "heading2", "heading3")
@@ -114,7 +144,7 @@ def check_docx(path: str) -> dict:
 
     # 结构检查：标题层级跳级
     prev_level = 0
-    for i, item in enumerate(data.get("structure", [])):
+    for i, item in enumerate(structure):
         t = item.get("type", "")
         if t in ("heading1", "heading2", "heading3"):
             level = int(t[-1])
@@ -168,7 +198,7 @@ def check_pptx(path: str) -> dict:
 
 
 def check_excel(path: str) -> dict:
-    """xlsx 质量体检：表头重复/空列/空行。"""
+    """xlsx 质量体检：表头重复/空列/空行/数据重复/空行比例。"""
     from openpyxl import load_workbook
     wb = load_workbook(path, data_only=True)
     issues = []
@@ -194,6 +224,34 @@ def check_excel(path: str) -> dict:
                 issues.append({
                     "level": "warning", "type": "empty_header_cell",
                     "location": f"sheet「{ws.title}」第{hi + 1}列", "detail": "表头单元格为空",
+                })
+        # ── 数据质量：空行比例 + 纯重复行 ──
+        data_rows = rows[1:]
+        if data_rows:
+            empty_rows = [r for r in data_rows if all(v is None or str(v).strip() == "" for v in r)]
+            empty_ratio = len(empty_rows) / len(data_rows)
+            if len(data_rows) >= 5 and empty_ratio > 0.5:
+                issues.append({
+                    "level": "warning", "type": "many_empty_rows",
+                    "location": f"sheet「{ws.title}」",
+                    "detail": f"空行占比过高（{len(empty_rows)}/{len(data_rows)}，{empty_ratio:.0%}）",
+                })
+            # 纯重复行检测（整行内容完全一致）
+            seen_rows = set()
+            dup_count = 0
+            for r in data_rows:
+                if all(v is None or str(v).strip() == "" for v in r):
+                    continue
+                key = tuple(str(v).strip() if v is not None else "" for v in r)
+                if key in seen_rows:
+                    dup_count += 1
+                else:
+                    seen_rows.add(key)
+            if dup_count >= 3:
+                issues.append({
+                    "level": "warning", "type": "dup_rows",
+                    "location": f"sheet「{ws.title}」",
+                    "detail": f"检测到 {dup_count} 行完全重复的数据行",
                 })
     return {
         "ok": True, "path": path, "sheets": len(wb.sheetnames),
