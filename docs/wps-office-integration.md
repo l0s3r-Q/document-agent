@@ -34,13 +34,13 @@
 [[plugins]]
 name    = "document-toolkit"
 command = "python"
-args    = ["C:\\Users\\36078\\skills\\mcp\\document-toolkit\\server.py"]
+args    = ["<HOME>\\skills\\mcp\\document-toolkit\\server.py"]
 
 # wps-office（在线编辑，Windows 轮询模式）
 [[plugins]]
 name    = "wps-office"
 command = "node"
-args    = ["C:\\Users\\36078\\skills\\mcp\\wps-office\\dist\\index.js"]
+args    = ["<HOME>\\skills\\mcp\\wps-office\\dist\\index.js"]
 env     = { WPS_USE_POLL = "1" }
 ```
 

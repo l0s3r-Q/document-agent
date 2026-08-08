@@ -18,9 +18,10 @@ import subprocess
 import sys
 import time
 
-# ============ 配置 ============
-DOC_TOOLKIT = r"C:\Users\36078\skills\mcp\document-toolkit\server.py"
-WPS_MCP = r"C:\Users\36078\skills\mcp\wps-office\dist\index.js"
+# ============ 配置（用 <HOME> 环境变量，勿硬编码本机路径） ============
+SKILLS_ROOT = os.path.join(os.path.expanduser("~"), "skills")
+DOC_TOOLKIT = os.path.join(SKILLS_ROOT, "mcp", "document-toolkit", "server.py")
+WPS_MCP = os.path.join(SKILLS_ROOT, "mcp", "wps-office", "dist", "index.js")
 OUT_DIR = os.path.join(os.path.expanduser("~"), "Desktop", "文档")
 DOCX_PATH = os.path.join(OUT_DIR, "安全生产检查通知.docx")
 PDF_PATH = os.path.join(OUT_DIR, "安全生产检查通知.pdf")
@@ -113,7 +114,8 @@ def main():
     #       `wps_word_open_document(filePath=...)` 即可，无需独立进程。
     #       独立进程仅用于演示，且需 WPS 运行 + Word 组件已打开。
     print(f"\n[4/4] wps-office.wps_word_open_document（Reasonix 已注册时直接调用 MCP 工具）")
-    if os.path.exists(r"C:\Users\36078\AppData\Roaming\reasonix\config.toml"):
+    cfg_path = os.path.join(os.path.expanduser("~"), "AppData", "Roaming", "reasonix", "config.toml")
+    if os.path.exists(cfg_path):
         print("    提示: 在 AI 工具中调用 wps-office 的 `wps_word_open_document`，参数 filePath。")
         print("    前提: WPS 已运行且 Word 组件已打开（本脚本独立进程会与 Reasonix 的 58891 端口冲突，故跳过实际调用）。")
     else:
